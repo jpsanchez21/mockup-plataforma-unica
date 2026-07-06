@@ -39,14 +39,15 @@ interface UseSkanviewDataResult {
   meta: SkanviewMeta | null;
 }
 
-export function useSkanviewData(activeWindow: TimeWindow): UseSkanviewDataResult {
+export function useSkanviewData(activeWindow: TimeWindow, deviceId: string = 'mock-rig'): UseSkanviewDataResult {
   const [raw, setRaw] = useState<SkanviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!deviceId) return;
     setLoading(true);
-    fetch('/skanview_data.json')
+    fetch(`/data/${deviceId}.json`)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<SkanviewData>;
@@ -59,7 +60,7 @@ export function useSkanviewData(activeWindow: TimeWindow): UseSkanviewDataResult
         setError(e.message || 'Error cargando datos');
         setLoading(false);
       });
-  }, []);
+  }, [deviceId]);
 
   const data = useMemo<DataPoint[]>(() => {
     if (!raw) return [];
@@ -79,4 +80,31 @@ export function useSkanviewData(activeWindow: TimeWindow): UseSkanviewDataResult
     error,
     meta: raw?.meta ?? null,
   };
+}
+
+export interface RigMeta {
+  device_id: string;
+  number: number | string;
+  online: boolean;
+  ping_time: string | null;
+}
+
+export function useRigsMeta(): { rigs: RigMeta[]; loading: boolean } {
+  const [rigs, setRigs] = useState<RigMeta[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/data/rigs_meta.json')
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<RigMeta[]>;
+      })
+      .then(d => {
+        setRigs(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  return { rigs, loading };
 }

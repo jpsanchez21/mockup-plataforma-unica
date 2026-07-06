@@ -1,0 +1,5 @@
+[
+  { "device_id": "mock-rig", "number": 1, "online": true, "ping_time": "2026-07-06T15:00:00" },
+  { "device_id": "mock-rig-2", "number": 2, "online": true, "ping_time": "2026-07-06T14:50:00" },
+  { "device_id": "mock-rig-3", "number": 3, "online": false, "ping_time": "2026-07-01T09:12:00" }
+]

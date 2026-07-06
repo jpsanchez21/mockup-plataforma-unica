@@ -6,7 +6,7 @@ import {
   YAxis,
   ResponsiveContainer,
 } from 'recharts';
-import { Settings, Plus, Minus, History, Download, Lock } from 'lucide-react';
+import { Settings, X, Plus, Minus } from 'lucide-react';
 import { TimeWindow, DataPoint } from '../hooks/useSkanviewData';
 
 interface TraceConfig {
@@ -18,21 +18,6 @@ interface TraceConfig {
   max: number;
   trackIndex: number;
 }
-
-const TRACE_UNITS: Record<string, string[]> = {
-  wob:      ['Klb', 'lb', 'kg', 'kN'],
-  tubes:    ['tubos'],
-  depth:    ['ft', 'm'],
-  hookload: ['Klb', 'lb', 'kg', 'kN'],
-  blockVel: ['ft/min', 'm/min'],
-  blockPos: ['ft', 'm'],
-  flow:     ['Bbls/min', 'gpm', 'lpm', 'm³/min'],
-  spm:      ['SPM'],
-  pump:     ['psi', 'kPa', 'bar'],
-  torqPot:  ['lb-ft', 'kN·m', 'N·m'],
-  torque:   ['lb-ft', 'kN·m', 'N·m'],
-  torqHid:  ['lb-ft', 'kN·m', 'N·m'],
-};
 
 const INITIAL_TRACES: TraceConfig[] = [
   // Track 0
@@ -85,20 +70,18 @@ const TraceHeader = ({ trace }: { trace: TraceConfig }) => {
   );
 };
 
-const TraceLegendEditor = ({
-  trace,
-  val,
-  isEditing,
-  onEdit,
-  onUpdate,
-  showUnitSelector,
-}: {
-  trace: TraceConfig;
-  val: string;
-  isEditing: boolean;
+const TraceLegendEditor = ({ 
+  trace, 
+  val, 
+  isEditing, 
+  onEdit, 
+  onUpdate 
+}: { 
+  trace: TraceConfig; 
+  val: string; 
+  isEditing: boolean; 
   onEdit: () => void;
   onUpdate: (t: TraceConfig) => void;
-  showUnitSelector?: boolean;
 }) => {
   const [local, setLocal] = useState(trace);
   
@@ -174,33 +157,14 @@ const TraceLegendEditor = ({
             </div>
           </div>
 
-          {/* Unit selector — only for platforms that enable it */}
-          {showUnitSelector && (() => {
-            const available = TRACE_UNITS[local.id] ?? [local.unit];
-            if (available.length <= 1) return null;
-            return (
-              <div className="flex items-center justify-between p-2 border-b border-white/10">
-                <span className="text-[10px] font-black text-white/70 uppercase">Unidad:</span>
-                <select
-                  value={local.unit}
-                  onChange={e => handleChange('unit', e.target.value)}
-                  className="bg-[#252526] text-white text-[11px] font-bold outline-none cursor-pointer rounded px-2 py-1 border border-white/20 hover:border-white/40 transition-colors appearance-none"
-                  style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%2210%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center', paddingRight: '22px' }}
-                >
-                  {available.map(u => <option key={u} value={u} className="bg-[#1a1a1b]">{u}</option>)}
-                </select>
-              </div>
-            );
-          })()}
-
           <div className="flex items-center justify-between p-2">
             <span className="text-[11px] font-black text-white/70">Color:</span>
             <div className="relative w-28 h-6 rounded border border-white/20" style={{ backgroundColor: local.color }}>
-               <input
-                 type="color"
-                 value={local.color}
+               <input 
+                 type="color" 
+                 value={local.color} 
                  onChange={e => handleChange('color', e.target.value)}
-                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
                />
             </div>
           </div>
@@ -253,25 +217,28 @@ const VerticalBrush = ({
   }, [range, onChange]);
 
   return (
-     <div className="w-[18px] flex flex-col items-center justify-between py-4 pl-2 pr-1 relative h-full">
-        <div ref={trackRef} className="w-[5px] bg-[#3e3e42] h-full rounded-full relative shadow-inner">
-           {/* Active visual range */}
+     <div className="w-[30px] flex flex-col items-center justify-between py-[22px] relative h-full">
+        {/* The central track line */}
+        <div ref={trackRef} className="absolute inset-y-[22px] left-1/2 -translate-x-1/2 w-[5px] bg-white/5"></div>
+
+        <div className="w-full relative h-full">
+           {/* Active visual range line (the teal active section) */}
            <div 
-              className="absolute w-full bg-cyan-600 rounded-full opacity-60 pointer-events-none"
-              style={{ top: `${range[0] * 100}%`, height: `${(range[1] - range[0]) * 100}%` }}
+              className="absolute w-[5px] left-1/2 -translate-x-1/2 bg-[#1eaeca] pointer-events-none"
+              style={{ top: `calc(${range[0] * 100}%)`, height: `calc(${(range[1] - range[0]) * 100}%)` }}
            ></div>
            
            {/* Top Thumb */}
            <div 
               onMouseDown={() => setDragging('top')}
-              className="w-3.5 h-3.5 rounded-full bg-white z-10 shadow border border-gray-300 absolute left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-ns-resize hover:scale-125 transition-transform"
+              className="w-3.5 h-3.5 rounded-full bg-white z-10 shadow-md absolute left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-ns-resize hover:scale-125 transition-transform"
               style={{ top: `${range[0] * 100}%` }}
            ></div>
 
            {/* Bottom Thumb */}
            <div 
               onMouseDown={() => setDragging('bottom')}
-              className="w-3.5 h-3.5 rounded-full bg-white z-10 shadow border border-gray-300 absolute left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-ns-resize hover:scale-125 transition-transform"
+              className="w-3.5 h-3.5 rounded-full bg-white z-10 shadow-md absolute left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-ns-resize hover:scale-125 transition-transform"
               style={{ top: `${range[1] * 100}%` }}
            ></div>
         </div>
@@ -403,33 +370,14 @@ interface WellChartProps {
   timeWindow: TimeWindow;
   onTimeWindowChange: (v: TimeWindow) => void;
   isHistorical?: boolean;
-  onShowHistory?: () => void;
-  showBrushPanel?: boolean;
-  hideDepthFilter?: boolean;
-  showUnitSelector?: boolean;
-  historyVariant?: 'cta';
-  lockedHistory?: boolean;
-  historyPreviewContent?: React.ReactNode;
-  onLockedHistoryHoverChange?: (hovering: boolean) => void;
 }
 
-const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _loading, timeWindow, onTimeWindowChange, isHistorical, onShowHistory, showBrushPanel = false, hideDepthFilter = false, showUnitSelector = false, historyVariant, lockedHistory, historyPreviewContent, onLockedHistoryHoverChange }) => {
+const ActiveWellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading, timeWindow, onTimeWindowChange, isHistorical }) => {
   const [traces, setTraces] = useState<TraceConfig[]>(INITIAL_TRACES);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showHistoryPreview, setShowHistoryPreview] = useState(false);
   const [macroRange, setMacroRange] = useState<[number, number]>([0, 1]);
   const [microRange, setMicroRange] = useState<[number, number]>([0, 1]);
-
-  React.useEffect(() => {
-     if (!isHistorical && historyVariant === 'cta' && historyPreviewContent) {
-        setShowHistoryPreview(true);
-        const timer = setTimeout(() => {
-           setShowHistoryPreview(false);
-        }, 8000);
-        return () => clearTimeout(timer);
-     }
-  }, [isHistorical, historyVariant, historyPreviewContent]);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const tracks = [0, 1, 2, 3];
@@ -479,7 +427,7 @@ const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _load
     <div ref={containerRef} className="w-full h-full flex bg-[#1c1c1e] text-white p-2 select-none gap-px overflow-hidden relative">
       
       {/* ═══ TIME SCALE OR WELL PROFILE (Fixed left) ═══ */}
-      <div className={`${(isHistorical || (showBrushPanel && !hideDepthFilter)) ? 'w-[200px]' : 'w-[108px]'} border-r ${isHistorical ? 'border-[#515151]' : 'border-white/5'} flex flex-row relative z-10 shrink-0 bg-[#1c1c1e] transition-all`}>
+      <div className={`${isHistorical ? 'w-[200px]' : 'w-[84px]'} border-r border-[#515151] flex ${isHistorical ? 'flex-row' : 'flex-col'} relative z-10 shrink-0 bg-[#1c1c1e] transition-all`}>
          {isHistorical ? (
             <>
                {/* 1. MACRO FILTER COLUMN (Left, Tall) */}
@@ -552,275 +500,76 @@ const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _load
                   <div className="h-[140px] shrink-0 border-t border-white/10" />
                </div>
             </>
-         ) : showBrushPanel ? (
-            <>
-               {/* ═══ hideDepthFilter: skip macro column, keep controls + micro brush ═══ */}
-               {hideDepthFilter ? (
-                  <div className="w-[108px] flex flex-col shrink-0 bg-[#1c1c1e] z-[100]">
-                     <div className="h-[135px] shrink-0 border-b border-white/10 flex flex-col p-2 gap-2 relative">
-
-                        {/* Row 1: gear + time window label */}
-                        <div className="flex items-center gap-2">
-                           <button
-                             onClick={() => setShowTimePicker(!showTimePicker)}
-                             className="w-7 h-7 rounded bg-white/[0.05] border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors shadow-sm shrink-0"
-                           >
-                             <Settings size={15} className="text-white/80" />
-                           </button>
-                           <span className="text-[15px] font-black text-white leading-none">
-                             {TIME_WINDOWS.find(tw => tw.v === timeWindow)?.l.replace('min', ' min').replace('hr', ' hr').replace('d', ' d')}
-                           </span>
-                        </div>
-
-                        {/* Row 2: RT indicator below the time label */}
-                        <div className="flex items-center gap-1.5 pl-0.5">
-                           <div className="w-[7px] h-[7px] rounded-full bg-[#96FFC2] shadow-[0_0_7px_rgba(150,255,194,0.8)]" />
-                           <span className="text-[9px] font-black tracking-widest uppercase" style={{ color: '#96FFC2' }}>RT</span>
-                           <span className="text-[7.5px] font-bold text-white/35 uppercase tracking-wider">En vivo</span>
-                        </div>
-
-                        {/* Row 3: History & Export buttons */}
-                        {onShowHistory && (
-                           historyVariant === 'cta' ? (
-                             <div
-                                className="relative group w-full"
-                                onMouseEnter={() => { setShowHistoryPreview(true); onLockedHistoryHoverChange?.(true); }}
-                                onMouseLeave={() => { setShowHistoryPreview(false); onLockedHistoryHoverChange?.(false); }}
-                             >
-                               {lockedHistory ? (
-                                  <div className="relative w-full">
-                                    <div className="w-full flex flex-col gap-[4px] py-[6px] px-2 rounded-[3px] border border-white/[0.07] bg-white/[0.03] cursor-not-allowed opacity-50">
-                                      <div className="flex items-center gap-1.5">
-                                        <History size={10} className="text-white/40 shrink-0" />
-                                        <span className="text-[7.5px] font-bold text-white/40 uppercase tracking-wider leading-none">Histórico</span>
-                                      </div>
-                                      <div className="flex items-center gap-1.5">
-                                        <Download size={10} className="text-white/40 shrink-0" />
-                                        <span className="text-[7.5px] font-bold text-white/40 uppercase tracking-wider leading-none">Exportar</span>
-                                      </div>
-                                    </div>
-                                    <div className="absolute -top-1.5 -right-1.5 w-[15px] h-[15px] rounded-full bg-[#1c1c1e] border border-white/20 flex items-center justify-center shadow-md">
-                                      <Lock size={7} className="text-white/70" />
-                                    </div>
-                                  </div>
-                               ) : (
-                                  <button
-                                    onClick={onShowHistory}
-                                    className="w-full flex flex-col gap-[4px] py-[6px] px-2 rounded-[3px] border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.09] hover:border-white/[0.18] transition-all group/btn"
-                                  >
-                                    <div className="flex items-center gap-1.5">
-                                      <History size={10} className="text-white/40 group-hover/btn:text-[#47CEAC] transition-colors shrink-0" />
-                                      <span className="text-[7.5px] font-bold text-white/40 group-hover/btn:text-white/65 uppercase tracking-wider leading-none transition-colors">Histórico</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <Download size={10} className="text-white/40 group-hover/btn:text-[#47CEAC] transition-colors shrink-0" />
-                                      <span className="text-[7.5px] font-bold text-white/40 group-hover/btn:text-white/65 uppercase tracking-wider leading-none transition-colors">Exportar</span>
-                                    </div>
-                                  </button>
-                               )}
-                               {showHistoryPreview && historyPreviewContent}
-                             </div>
-                           ) : (
-                             <button
-                               onClick={onShowHistory}
-                               className="w-full flex flex-col items-center justify-center gap-[3px] py-[7px] rounded-[4px] border border-[#47CEAC]/35 bg-[#47CEAC]/10 hover:bg-[#47CEAC]/22 hover:border-[#47CEAC]/60 transition-all shadow-sm group"
-                             >
-                               <div className="flex items-center gap-1.5">
-                                 <History size={11} className="text-[#47CEAC] group-hover:scale-110 transition-transform" />
-                                 <span className="text-[9px] font-black text-[#47CEAC] uppercase tracking-wider leading-none">Histórico</span>
-                               </div>
-                               <span className="text-[7px] font-bold text-white/35 uppercase tracking-widest leading-none">Explorar & Exportar</span>
-                             </button>
-                           )
-                        )}
-
-                        {showTimePicker && (
-                          <div className="absolute top-[44px] left-[10px] flex flex-col gap-1 p-1.5 bg-[#252526] border border-white/10 rounded shadow-2xl z-[200]">
-                             {TIME_WINDOWS.map(tw => (
-                               <button
-                                 key={tw.v}
-                                 onClick={() => { onTimeWindowChange(tw.v); setShowTimePicker(false); setMicroRange([0, 1]); }}
-                                 className={`px-3 py-1.5 text-[11px] font-bold uppercase rounded text-left ${timeWindow === tw.v ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/10 text-white/70'}`}
-                               >
-                                 {tw.l}
-                               </button>
-                             ))}
-                          </div>
-                        )}
-                     </div>
-                     <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
-                        <VerticalBrush onChange={setMicroRange} />
-                        <div className="flex-1 flex flex-col justify-between py-4 text-[10px] text-white/80 font-bold font-mono">
-                           {Array.from({ length: 9 }).map((_, i) => {
-                              if (!data.length) return <span key={i} className="text-right block">--:--:--</span>;
-                              const pointTs = fullDomainY[0] + (fullDomainY[1] - fullDomainY[0]) * (i / 8);
-                              const d = new Date(pointTs);
-                              return (
-                                <div key={i} className="flex items-center justify-end gap-1 group cursor-pointer">
-                                   <span className="leading-none select-none group-hover:text-cyan-400 transition-colors">
-                                      {d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                   </span>
-                                   <div className="w-2 h-[1px] bg-white/30 group-hover:bg-cyan-400 transition-colors shrink-0"></div>
-                                </div>
-                              );
-                           })}
-                        </div>
-                     </div>
-                     <div className="h-[140px] border-t border-white/10 shrink-0" />
-                  </div>
-               ) : (
-               <>
-               {/* ═══ OPERATIONAL VIEW WITH BRUSH PANEL (VisualizacionPro) ═══ */}
-               {/* 1. MACRO FILTER COLUMN (Left, Tall) */}
-               <div className="w-[125px] flex flex-col border-r border-white/5 shrink-0 bg-black/10">
-                   <div className="border-b border-white/10 flex flex-col p-2 pt-3 shrink-0 relative bg-[#1c1c1e]">
-                      <div className="flex items-start justify-between gap-1 w-full h-10 px-1">
-                         <div className="flex items-center gap-1">
-                           <button
-                             onClick={() => setShowTimePicker(!showTimePicker)}
-                             className="w-7 h-7 rounded bg-white/[0.05] border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors shadow-sm"
-                           >
-                             <Settings size={16} className="text-white/80" />
-                           </button>
-                           {onShowHistory && (
-                             <button
-                               onClick={onShowHistory}
-                               className="w-7 h-7 rounded bg-[#47CEAC]/15 border border-[#47CEAC]/30 flex items-center justify-center hover:bg-[#47CEAC]/30 transition-colors shadow-sm group"
-                               title="Históricos / Exportar Data"
-                             >
-                               <History size={14} className="text-[#47CEAC]/80 group-hover:text-[#47CEAC] transition-colors" />
-                             </button>
-                           )}
-                         </div>
-                         <div className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center shadow-[0_0_12px_rgba(150,255,194,0.25)] bg-black/20" style={{ borderColor: '#96FFC2', color: '#96FFC2' }}>
-                            <span className="text-[10px] font-black tracking-tighter">RT</span>
-                         </div>
-                      </div>
-                      <div className="text-[12px] font-bold mt-2 pb-1 border-b border-white/10 w-full mb-1 text-white/90 px-1">
-                         {TIME_WINDOWS.find(tw => tw.v === timeWindow)?.l.replace('min', ' min').replace('hr', ' hr').replace('d', ' d')}
-                      </div>
-                      {showTimePicker && (
-                        <div className="absolute top-[48px] left-[10px] flex flex-col gap-1 p-1.5 bg-[#252526] border border-white/10 rounded shadow-2xl z-[200]">
-                           {TIME_WINDOWS.map(tw => (
-                             <button
-                               key={tw.v}
-                               onClick={() => { onTimeWindowChange(tw.v); setShowTimePicker(false); setMicroRange([0, 1]); }}
-                               className={`px-3 py-1.5 text-[11px] font-bold uppercase rounded text-left ${timeWindow === tw.v ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/10 text-white/70'}`}
-                             >
-                               {tw.l}
-                             </button>
-                           ))}
-                        </div>
-                      )}
-                   </div>
-                   <div className="flex-1 relative z-10 w-full overflow-hidden">
-                      {data.length > 0 && (
-                         <ResponsiveContainer width="100%" height="100%">
-                             <LineChart layout="vertical" data={data.map(d => ({ ts: d.ts, depth: d.depth }))} margin={{top:22,bottom:22,left:0,right:0}}>
-                                <YAxis dataKey="ts" type="number" domain={fullDomainY} hide reversed />
-                                <XAxis type="number" hide domain={['dataMin', 'dataMax']} />
-                                <Line type="step" dataKey="depth" stroke="#ffffff" strokeWidth={1.5} dot={false} isAnimationActive={false} className="opacity-80" />
-                             </LineChart>
-                         </ResponsiveContainer>
-                      )}
-                      <div className="absolute inset-y-[22px] left-0 right-0 z-20">
-                         <ViewportBrush onChange={setMacroRange} domain={fullDomainY as [number, number]} />
-                      </div>
-                   </div>
-                   <div className="h-[40px] shrink-0 w-full p-1 flex flex-col items-center justify-center relative mb-1">
-                      <span className="text-[8px] text-white/60 mb-0.5 pointer-events-none">Profundidad (ft)</span>
-                      <div className="flex w-full justify-between text-[7px] font-black text-white/80 font-mono tracking-tighter">
-                         <span className="text-[#1477D2]">0</span><span>5K</span><span>10K</span><span>15K</span>
-                      </div>
-                   </div>
-               </div>
-               <div className="flex-1 flex flex-col shrink-0 bg-[#1c1c1e]">
-                  <div className="h-[135px] shrink-0 border-b border-white/10" />
-                  <div className="flex-1 flex flex-row py-0 relative min-h-0 bg-transparent overflow-hidden">
-                      <VerticalBrush onChange={setMicroRange} />
-                      <div className="flex-1 flex flex-col justify-between items-end pr-1 py-4 text-[10px] text-white/80 font-bold font-mono">
-                         {Array.from({ length: 9 }).map((_, i) => {
-                            if (!data.length) return <span key={i}>--:--:--</span>;
-                            const pointTs = fullDomainY[0] + (fullDomainY[1] - fullDomainY[0]) * (i / 8);
-                            const d = new Date(pointTs);
-                            return (
-                              <div key={i} className="flex items-center gap-1.5 group w-full justify-end cursor-pointer">
-                                 <span className="leading-none select-none group-hover:text-cyan-400 transition-colors">
-                                    {d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                 </span>
-                                 <div className="w-1.5 h-[1px] bg-white/30 group-hover:bg-cyan-400 align-middle transition-colors"></div>
-                              </div>
-                            );
-                         })}
-                      </div>
-                  </div>
-                  <div className="h-[140px] border-t border-white/10 shrink-0 bg-[#1c1c1e] w-full z-10"></div>
-               </div>
-            </>
-            )}
-            </>
          ) : (
             <>
-               {/* ═══ SIMPLIFIED LEFT PANEL (SkanView): gear/RT/time + brush + labels, no sparkline ═══ */}
-               <div className="w-[108px] flex flex-col shrink-0 border-r border-white/5 bg-[#1c1c1e]">
-                  {/* Header — 135px, matches track header height */}
-                  <div className="h-[135px] shrink-0 border-b border-white/10 flex flex-col justify-between p-2 relative">
-                     <div className="flex flex-col items-start gap-1.5">
-                        {/* Gear + RT inline */}
-                        <div className="flex items-center gap-1.5">
-                           <button
-                             onClick={() => setShowTimePicker(!showTimePicker)}
-                             className="w-7 h-7 rounded bg-white/[0.05] border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors shadow-sm"
-                           >
-                             <Settings size={16} className="text-white/80" />
-                           </button>
-                           <div className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center bg-black/20" style={{ borderColor: '#96FFC2', color: '#96FFC2' }}>
-                              <span className="text-[10px] font-black tracking-tighter">RT</span>
-                           </div>
-                        </div>
-                        {/* Time window label directly below gear */}
-                        <span className="text-[12px] font-bold text-white/90 leading-none pl-0.5">
-                          {TIME_WINDOWS.find(tw => tw.v === timeWindow)?.l.replace('min', ' min').replace('hr', ' hr').replace('d', ' d')}
-                        </span>
-                     </div>
-                     {showTimePicker && (
-                       <div className="absolute top-[44px] left-[2px] flex flex-col gap-1 p-1.5 bg-[#252526] border border-white/10 rounded shadow-2xl z-[200]">
-                          {TIME_WINDOWS.map(tw => (
-                            <button
-                              key={tw.v}
-                              onClick={() => { onTimeWindowChange(tw.v); setShowTimePicker(false); setMicroRange([0, 1]); }}
-                              className={`px-3 py-1.5 text-[11px] font-bold uppercase rounded text-left ${timeWindow === tw.v ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/10 text-white/70'}`}
-                            >
-                              {tw.l}
-                            </button>
-                          ))}
-                       </div>
-                     )}
-                  </div>
-
-                  {/* Plot area — brush left edge, labels right-aligned flush to track boundary */}
-                  <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
-                     <VerticalBrush onChange={setMicroRange} />
-                     <div className="flex-1 flex flex-col justify-between py-4 text-[10px] text-white/80 font-bold font-mono">
-                        {Array.from({ length: 9 }).map((_, i) => {
-                           if (!data.length) return <span key={i} className="text-right block">--:--:--</span>;
-                           const pointTs = fullDomainY[0] + (fullDomainY[1] - fullDomainY[0]) * (i / 8);
-                           const d = new Date(pointTs);
-                           return (
-                             <div key={i} className="flex items-center justify-end gap-1 group cursor-pointer">
-                                <span className="leading-none select-none group-hover:text-cyan-400 transition-colors">
-                                   {d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </span>
-                                <div className="w-2 h-[1px] bg-white/30 group-hover:bg-cyan-400 transition-colors shrink-0"></div>
-                             </div>
-                           );
-                        })}
+               {/* ═══ TIME SCALE (Operational View) ═══ */}
+               {/* Top Headers Area (matching track headers height: 135px) */}
+               <div className="h-[135px] border-b border-white/10 flex flex-col p-2 pt-3 shrink-0 relative">
+                  {/* Gear and RT Header */}
+                  <div className="flex items-start justify-between gap-1 w-full h-10 px-1">
+                     <button 
+                       onClick={() => setShowTimePicker(!showTimePicker)}
+                       className="w-7 h-7 rounded bg-white/[0.05] border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors shadow-sm"
+                     >
+                       <Settings size={16} className="text-white/80" />
+                     </button>
+                     
+                     <div className="w-7 h-7 rounded-full border-[1.5px] flex items-center justify-center shadow-[0_0_12px_rgba(150,255,194,0.25)] bg-black/20" style={{ borderColor: '#96FFC2', color: '#96FFC2' }}>
+                        <span className="text-[10px] font-black tracking-tighter">RT</span>
                      </div>
                   </div>
 
-                  {/* Footer filler — 140px, matches track footer height */}
-                  <div className="h-[140px] border-t border-white/10 shrink-0" />
+                  <div className="text-[12px] font-bold mt-2 pb-1 border-b border-white/10 w-full mb-1 text-white/90">
+                     {TIME_WINDOWS.find(tw => tw.v === timeWindow)?.l.replace('min', ' min').replace('hr', ' hr').replace('d', ' d')}
+                  </div>
+
+                  {/* TimePicker Dropdown */}
+                  {showTimePicker && (
+                    <div className="absolute top-[48px] left-[10px] flex flex-col gap-1 p-1.5 bg-[#252526] border border-white/10 rounded shadow-2xl z-[200]">
+                       {TIME_WINDOWS.map(tw => (
+                         <button 
+                           key={tw.v}
+                           onClick={() => { onTimeWindowChange(tw.v); setShowTimePicker(false); setMicroRange([0, 1]); /* reset brush on window change */ }}
+                           className={`px-3 py-1.5 text-[11px] font-bold uppercase rounded text-left ${timeWindow === tw.v ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/10 text-white/70'}`}
+                         >
+                           {tw.l}
+                         </button>
+                       ))}
+                    </div>
+                  )}
                </div>
+
+               {/* Plot Area Equivalent (Scale + Brush) */}
+               <div className="flex-1 flex flex-row py-0 relative min-h-0 bg-transparent overflow-hidden">
+                   
+                   {/* Dynamic Functional Brush */}
+                   <VerticalBrush onChange={setMicroRange} />
+
+                   {/* Time tick labels anchored to fullDomainY */}
+                   <div className="flex-1 flex flex-col justify-between items-end py-[22px] text-[10px] text-white font-bold font-mono border-r border-[#515151]">
+                      {Array.from({ length: 9 }).map((_, i) => {
+                         const start = new Date("2026-04-17T10:30:00").getTime();
+                         const end = new Date("2026-04-17T16:00:00").getTime();
+                         const t = start + (end - start) * (i / 8);
+                         const d = new Date(t);
+                         const isMidnight = d.getHours() === 0 && d.getMinutes() === 0;
+                         return (
+                            <div key={i} className="flex items-center gap-1.5 w-full justify-end relative h-0">
+                               {i === 0 && (
+                                  <span className="absolute -top-3 right-1 text-[#1477D2] text-[9px] font-black pointer-events-none">0</span>
+                               )}
+                               <span className="leading-none text-right font-mono text-white transition-colors">
+                                  {d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                               </span>
+                               <div className="w-1.5 h-[1.5px] bg-white align-middle"></div>
+                            </div>
+                         );
+                      })}
+                   </div>
+               </div>
+
+               {/* Footer Area filler (matching track columns' 140px footer) */}
+               <div className="h-[140px] border-t border-white/10 shrink-0 bg-[#1c1c1e] w-full z-10"></div>
             </>
          )}
       </div>
@@ -882,14 +631,13 @@ const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _load
                    const rawVal = latestPoint ? (latestPoint as any)[t.id] : null;
                    const val = (rawVal !== null && rawVal !== undefined) ? Number(rawVal).toFixed(1) : '—';
                    return (
-                      <TraceLegendEditor
-                        key={idx}
-                        trace={t}
-                        val={val}
+                      <TraceLegendEditor 
+                        key={idx} 
+                        trace={t} 
+                        val={val} 
                         isEditing={editingIndex === idx}
                         onEdit={() => setEditingIndex(editingIndex === idx ? null : idx)}
                         onUpdate={(updated) => handleUpdate(updated, idx)}
-                        showUnitSelector={showUnitSelector}
                       />
                    );
                  })}
@@ -903,4 +651,4 @@ const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _load
   );
 };
 
-export default WellChart;
+export default ActiveWellChart;
