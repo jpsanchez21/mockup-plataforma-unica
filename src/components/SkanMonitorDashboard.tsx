@@ -1,19 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, Layout, Printer, Play } from 'lucide-react';
 import WellChart from './WellChart';
 import ExportDrawer from './ExportDrawer';
+import { InterventionRow, HistoryData, sliceHistoryWindow, TimeWindow } from '../hooks/useSkanviewData';
 
 interface Props {
   onBack: () => void;
   mockData: any[];
   isHistorical?: boolean;
   autoAnimate?: boolean;
+  intervention?: InterventionRow | null;
 }
 
+function formatDuration(startIso: string | null, endIso: string | null): string {
+  if (!startIso || !endIso) return '';
+  const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
+  if (Number.isNaN(ms) || ms < 0) return '';
+  const totalHours = Math.floor(ms / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  return `${days} dia/s ${hours} hora/s`;
+}
 
-const SkanMonitorDashboard: React.FC<Props> = ({ onBack, autoAnimate }) => {
+const SkanMonitorDashboard: React.FC<Props> = ({ onBack, autoAnimate, intervention }) => {
   const [rawTelemetryData, setRawTelemetryData] = useState<any[]>([]);
-  const [timeWindow, setTimeWindow] = useState<any>('2h');
+  const [historyData, setHistoryData] = useState<HistoryData | null>(null);
+  const [historyError, setHistoryError] = useState(false);
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>('2h');
   const [isExportOpen, setIsExportOpen] = useState(false);
 
   useEffect(() => {
@@ -32,6 +45,7 @@ const SkanMonitorDashboard: React.FC<Props> = ({ onBack, autoAnimate }) => {
   }, [autoAnimate]);
 
   useEffect(() => {
+    if (intervention) return; // datos reales: se cargan en el efecto de abajo
     fetch('/data.csv').then(r => r.text()).then(txt => {
        const rows = txt.split('\n').filter(r => r.trim());
        const parsed = rows.slice(1).map((r, ii) => {
@@ -52,7 +66,28 @@ const SkanMonitorDashboard: React.FC<Props> = ({ onBack, autoAnimate }) => {
        }));
        setRawTelemetryData(parsedWithDates);
     });
-  }, []);
+  }, [intervention]);
+
+  useEffect(() => {
+    if (!intervention) return;
+    setHistoryError(false);
+    fetch(`/data/history/${intervention.id}.json`)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<HistoryData>;
+      })
+      .then(setHistoryData)
+      .catch(() => setHistoryError(true));
+  }, [intervention]);
+
+  const anchorMs = intervention?.date_end ? new Date(intervention.date_end).getTime() : 0;
+  const visibleHistory = useMemo(() => {
+    if (!historyData) return [];
+    return sliceHistoryWindow(historyData.points, anchorMs, timeWindow);
+  }, [historyData, anchorMs, timeWindow]);
+
+  const displayData = intervention ? visibleHistory : rawTelemetryData;
+  const displayLatestPoint = displayData.length ? displayData[displayData.length - 1] : null;
 
   return (
     <div className="flex flex-col h-full w-full bg-[#373944] text-white font-sans overflow-hidden">
@@ -90,22 +125,24 @@ const SkanMonitorDashboard: React.FC<Props> = ({ onBack, autoAnimate }) => {
          <div className="flex-1 flex items-center justify-around max-w-[1000px]">
              <div className="flex items-center gap-1.5">
                  <span className="text-[11px] font-bold text-white/80">Pozo:</span>
-                 <span className="text-[11px] font-normal text-white">MATANEGRA-85</span>
+                 <span className="text-[11px] font-normal text-white">{intervention ? intervention.pozo : 'MATANEGRA-85'}</span>
              </div>
-             
+
              <div className="flex items-center gap-1.5">
                  <span className="text-[11px] font-bold text-white/80">Intervención:</span>
-                 <span className="text-[11px] font-normal text-white">WORKOVER</span>
+                 <span className="text-[11px] font-normal text-white">{intervention ? (intervention.intervencion ?? '—') : 'WORKOVER'}</span>
              </div>
-             
+
              <div className="flex items-center gap-1.5">
                  <span className="text-[11px] font-bold text-white/80">Torre:</span>
-                 <span className="text-[11px] font-normal text-white">PETROT-3</span>
+                 <span className="text-[11px] font-normal text-white">{intervention ? intervention.torre : 'PETROT-3'}</span>
              </div>
 
              <div className="flex items-center gap-1.5">
                  <span className="text-[11px] font-bold text-white/80">Tiempo de Intervención:</span>
-                 <span className="text-[11px] font-normal text-white">5 dia/s 0 hora/s</span>
+                 <span className="text-[11px] font-normal text-white">
+                   {intervention ? (formatDuration(intervention.date_start, intervention.date_end) || '—') : '5 dia/s 0 hora/s'}
+                 </span>
              </div>
          </div>
       </div>
@@ -113,14 +150,20 @@ const SkanMonitorDashboard: React.FC<Props> = ({ onBack, autoAnimate }) => {
       {/* MAIN WORKSPACE */}
       <div className="flex-1 flex overflow-hidden px-1.5 pb-1.5 pt-0.5 bg-[#373944] relative">
          <div className="w-full h-full border border-[#515151] shadow-2xl bg-[#1c1c1e] overflow-hidden flex relative z-10">
-            <WellChart 
-               data={rawTelemetryData} 
-               latestPoint={rawTelemetryData.length ? rawTelemetryData[rawTelemetryData.length - 1] : null} 
-               loading={false} 
-               timeWindow={timeWindow} 
-               onTimeWindowChange={setTimeWindow}
-               isHistorical={true}
-            />
+            {intervention && historyError ? (
+              <div className="flex-1 flex items-center justify-center text-white/50 text-[12px]">
+                Aun no hay telemetria generada para esta intervencion. Intenta de nuevo en unos minutos.
+              </div>
+            ) : (
+              <WellChart
+                 data={displayData}
+                 latestPoint={displayLatestPoint}
+                 loading={false}
+                 timeWindow={timeWindow}
+                 onTimeWindowChange={setTimeWindow}
+                 isHistorical={true}
+              />
+            )}
          </div>
          
          <button 

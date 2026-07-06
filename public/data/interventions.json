@@ -1,0 +1,47 @@
+[
+  {
+    "id": 101,
+    "torre": "MOCK-1",
+    "device_id": "mock-rig",
+    "municipio": "ARAUCA",
+    "province": "ARAUCA",
+    "pozo": "MOCK WELL-1",
+    "intervencion": "WO/WS",
+    "status": "ACTIVA",
+    "online": true,
+    "inicio": "05/07/2026",
+    "fin": null,
+    "date_start": "2026-07-05T02:30:00",
+    "date_end": null
+  },
+  {
+    "id": 102,
+    "torre": "MOCK-2",
+    "device_id": "mock-rig-2",
+    "municipio": "VILLAVICENCIO",
+    "province": "META",
+    "pozo": "MOCK WELL-2",
+    "intervencion": "WO/WS",
+    "status": "ACTIVA",
+    "online": false,
+    "inicio": "06/07/2026",
+    "fin": null,
+    "date_start": "2026-07-06T08:00:00",
+    "date_end": null
+  },
+  {
+    "id": 1,
+    "torre": "MOCK-3",
+    "device_id": "mock-rig-3",
+    "municipio": "ANELO",
+    "province": "NEUQUEN",
+    "pozo": "MOCK WELL-3 (H)",
+    "intervencion": "CAMBIO DE BOMBA BM",
+    "status": "TERMINADA",
+    "online": true,
+    "inicio": "09/04/2026",
+    "fin": "09/04/2026",
+    "date_start": "2026-04-09T10:28:56.119000+00:00",
+    "date_end": "2026-04-09T20:25:48.119000+00:00"
+  }
+]

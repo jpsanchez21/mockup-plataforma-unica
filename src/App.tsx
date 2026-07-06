@@ -5,7 +5,7 @@ import Dashboard from './components/Dashboard';
 import InterventionsPage from './components/InterventionsPage';
 import PlatformHome from './components/PlatformHome';
 import LoginPage from './components/LoginPage';
-import { useSkanviewData, useRigsMeta, TimeWindow } from './hooks/useSkanviewData';
+import { useSkanviewData, useRigsMeta, TimeWindow, InterventionRow } from './hooks/useSkanviewData';
 import SkanMonitorInterventionsPage from './components/SkanMonitorInterventionsPage';
 import SkanMonitorDashboard from './components/SkanMonitorDashboard';
 import SkanMonitorActiveDashboard from './components/SkanMonitorActiveDashboard';
@@ -79,6 +79,9 @@ function App() {
   const [vizMediumMode, setVizMediumMode] = useState<'activas' | 'historicas'>('activas');
   const [vizBasicMode, setVizBasicMode] = useState<'activas' | 'historicas'>('activas');
 
+  const [vizPremiumRig, setVizPremiumRig] = useState<string>('');
+  const [vizPremiumIntervention, setVizPremiumIntervention] = useState<InterventionRow | null>(null);
+
   const { rigs } = useRigsMeta();
   const [selectedRig, setSelectedRig] = useState<string>('mock-rig');
   React.useEffect(() => {
@@ -91,6 +94,10 @@ function App() {
   const { data, latestPoint, loading, meta } = useSkanviewData(timeRange, selectedRig);
   const { data: data2h } = useSkanviewData('2h', selectedRig);
   const { data: dataAll } = useSkanviewData('1d', selectedRig);
+
+  const { data: premiumData, latestPoint: premiumLatestPoint, loading: premiumLoading, meta: premiumMeta } = useSkanviewData(timeRange, vizPremiumRig);
+  const { data: premiumData2h } = useSkanviewData('2h', vizPremiumRig);
+  const { data: premiumDataAll } = useSkanviewData('1d', vizPremiumRig);
 
   const handleSelectApp = (appId: string) => {
     if (['skanview', 'skanmonitor', 'vizpremium', 'vizmedium', 'vizbasic', 'pruebaA', 'pruebaB'].includes(appId)) {
@@ -180,8 +187,10 @@ function App() {
             <VisualizacionPremiumInterventionsPage
               initialTab={vizPremiumMode}
               onBack={() => { if (initialApp) window.close(); else setCurrentPage('platform'); }}
-              onOpenIntervention={(mode, isOffline) => {
+              onOpenIntervention={(mode, isOffline, item) => {
                 setVizPremiumMode(mode);
+                setVizPremiumIntervention(item ?? null);
+                setVizPremiumRig(item?.device_id ?? '');
                 setCurrentPage(isOffline ? 'vizpremium-interventions' : 'vizpremium-dashboard');
               }}
             />
@@ -189,14 +198,14 @@ function App() {
           ) : currentPage === 'vizpremium-dashboard' ? (
             vizPremiumMode === 'historicas' ? (
               <div className="flex flex-col flex-1 h-screen overflow-hidden">
-                <SkanMonitorDashboard mockData={data} isHistorical={true} onBack={() => setCurrentPage('vizpremium-interventions')} />
+                <SkanMonitorDashboard mockData={data} isHistorical={true} intervention={vizPremiumIntervention} onBack={() => setCurrentPage('vizpremium-interventions')} />
               </div>
             ) : (
               <div className="flex flex-1 mt-[50px] h-[calc(100vh-50px)] overflow-hidden p-2 gap-2">
                 <main className="flex-1 overflow-hidden flex flex-col relative">
                   <VisualizacionPremium
-                    data={data} data2h={data2h} allData={dataAll}
-                    latestPoint={latestPoint} loading={loading} meta={meta}
+                    data={premiumData} data2h={premiumData2h} allData={premiumDataAll}
+                    latestPoint={premiumLatestPoint} loading={premiumLoading} meta={premiumMeta}
                     timeRange={timeRange} onTimeRangeChange={setTimeRange}
                     isHistorical={false}
                   />

@@ -1,6 +1,7 @@
 """Regenera los JSON estaticos que sirve nginx (/var/www/sandbox/data) con datos
 reales de SKH_DB y del Data Lake operacional, usando el conector ya autorizado en
-/home/jpsanchez/00 conexiones. Pensado para correr por cron en el servidor.
+/home/jpsanchez/00 conexiones. Pensado para correr por cron en el servidor (cada
+2 min). Para telemetria de intervenciones ya cerradas ver refresh_history.py.
 
 Mapeo de columnas parquet -> DataPoint del frontend (best-effort por nombre,
 ajustar aqui si un experto de dominio confirma otra columna):
@@ -114,9 +115,60 @@ def load_rig_frame(db: SkanDataConnections, device_id: str) -> pd.DataFrame:
     return frame
 
 
+INTERVENTIONS_QUERY = """
+SELECT TOP 500 i.id, ro.rig_label, r.number, r.device_id, r.online, r.utc_offset,
+       w.name AS pozo, COALESCE(w.locality,'') AS municipio, COALESCE(w.province,'') AS province,
+       it.name AS tipo, i.status, i.date_start, i.date_end
+FROM dbo.interventions i
+JOIN dbo.rigs r ON r.id = i.id_rig
+JOIN dbo.rig_owners ro ON ro.id = r.id_rig_owner
+JOIN dbo.wells w ON w.id = i.id_well
+LEFT JOIN dbo.intervention_objectives io ON io.id = i.id_intervention_objective
+LEFT JOIN dbo.intervention_types it ON it.id = io.id_intervention_type
+ORDER BY i.date_start DESC
+"""
+
+
+def to_utc(local_dt, utc_offset) -> datetime | None:
+    """dbo.rigs.ping_time y las fechas de interventions vienen en hora local del
+    rig (segun rigs.utc_offset), no UTC -- confirmado comparando ping_time real
+    contra 'ahora' UTC. Sin esta conversion, anclar la telemetria (que si esta en
+    UTC) a estas fechas queda desfasado por utc_offset horas."""
+    if pd.isna(local_dt):
+        return None
+    offset = float(utc_offset) if pd.notna(utc_offset) else 0.0
+    return (local_dt - timedelta(hours=offset)).replace(tzinfo=timezone.utc)
+
+
+def refresh_interventions(db: SkanDataConnections, output_dir: Path) -> None:
+    rows = db.sql_query(INTERVENTIONS_QUERY, database="SKH_DB")
+    interventions = [
+        {
+            "id": int(row["id"]),
+            "torre": f"{row['rig_label']}-{row['number']}",
+            "device_id": row["device_id"],
+            "municipio": row["municipio"],
+            "province": row["province"],
+            "pozo": row["pozo"],
+            "intervencion": row["tipo"] if pd.notna(row["tipo"]) else None,
+            "status": row["status"],
+            "online": bool(row["online"]) if pd.notna(row["online"]) else False,
+            "inicio": row["date_start"].strftime("%d/%m/%Y") if pd.notna(row["date_start"]) else None,
+            "fin": row["date_end"].strftime("%d/%m/%Y") if pd.notna(row["date_end"]) else None,
+            "date_start": (lambda d: d.isoformat() if d else None)(to_utc(row["date_start"], row["utc_offset"])),
+            "date_end": (lambda d: d.isoformat() if d else None)(to_utc(row["date_end"], row["utc_offset"])),
+        }
+        for _, row in rows.iterrows()
+    ]
+    (output_dir / "interventions.json").write_text(json.dumps(interventions))
+    print(f"interventions.json: {len(interventions)} filas")
+
+
 def main() -> int:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     db = SkanDataConnections()
+
+    refresh_interventions(db, OUTPUT_DIR)
 
     rigs = db.sql_query(
         "SELECT device_id, number, online, ping_time FROM dbo.rigs ORDER BY online DESC, ping_time DESC",

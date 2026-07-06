@@ -1,49 +1,18 @@
 import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useInterventions, InterventionRow } from '../hooks/useSkanviewData';
 
 interface Props {
-  onOpenIntervention: (mode: 'activas' | 'historicas', isOffline?: boolean) => void;
+  onOpenIntervention: (mode: 'activas' | 'historicas', isOffline?: boolean, item?: InterventionRow) => void;
   onBack: () => void;
   initialTab?: 'activas' | 'historicas';
 }
 
-const mockActivas = [
-  { id: 1, torre: 'PETROT-2', municipio: 'CANTAGALLO', pozo: 'YARIGUI-193', inicio: '17/03/2026', online: false },
-  { id: 2, torre: 'BRASERV-3', municipio: 'VILLAVICENCIO', pozo: 'SURIA-32', inicio: '03/04/2026', online: true },
-  { id: 3, torre: 'PETROT-3', municipio: 'ARAUCA', pozo: 'LA YUCA-238', inicio: '07/04/2026', online: true },
-  { id: 4, torre: 'BRASERV-5', municipio: 'ACACIAS', pozo: 'AKACIAS-541', inicio: '19/03/2026', online: true },
-  { id: 5, torre: 'PETROT-6', municipio: 'ARAUCA', pozo: 'LA YUCA-98', inicio: '06/04/2026', online: true },
-  { id: 6, torre: 'COLPET-8', municipio: 'ARAUCA', pozo: 'CANO LIMON-51', inicio: '29/03/2026', online: false },
-  { id: 7, torre: 'COLPET-9', municipio: 'ARAUCA', pozo: 'LA YUCA-220', inicio: '01/04/2026', online: true },
-  { id: 8, torre: 'INDEP-15', municipio: 'VILLAVICENCIO', pozo: 'SURIA-19', inicio: '28/03/2026', online: false },
-  { id: 9, torre: 'INDEP-23', municipio: 'ARAUQUITA', pozo: 'REX NE-14', inicio: '30/03/2026', online: false },
-  { id: 10, torre: 'INDEP-27', municipio: 'ACACIAS', pozo: 'CASTILLA NORTE-48', inicio: '30/03/2026', online: true },
-  { id: 11, torre: 'INDEP-30', municipio: 'ARAUCA', pozo: 'LA YUCA-116', inicio: '06/04/2026', online: true },
-  { id: 12, torre: 'INDEP-34', municipio: 'CABUYARO', pozo: 'YATAY-2', inicio: '17/03/2026', online: true },
-  { id: 13, torre: 'INDEP-36', municipio: 'ARAUQUITA', pozo: 'COSECHA-C-01', inicio: '18/03/2026', online: false },
-  { id: 14, torre: 'BRASERV-40', municipio: 'ACACIAS', pozo: 'AKACIAS-22', inicio: '09/04/2026', online: true },
-];
-
-const mockHistoricas = [
-  { id: 1, torre: 'CLEAR-105', municipio: 'ANELO', pozo: 'LCAV-883(H)', intervencion: 'CAMBIO DE BOMBA BM', inicio: '27/03/2026', fin: '30/03/2026' },
-  { id: 2, torre: 'CLEAR-105', municipio: 'ANELO', pozo: 'LCAV-883(H)', intervencion: 'REPARACION', inicio: '15/02/2026', fin: '20/02/2026' },
-  { id: 3, torre: 'CLEAR-105', municipio: 'ANELO', pozo: 'LCAV-12(H)', intervencion: 'CAMBIO DE BOMBA BM', inicio: '21/03/2026', fin: '27/03/2026' },
-  { id: 4, torre: 'CLEAR-105', municipio: 'ANELO', pozo: 'LCAV-99(H)', intervencion: 'LIMPIEZA', inicio: '10/01/2026', fin: '15/01/2026' },
-  { id: 5, torre: 'BRASERV-149', municipio: 'CASTILLA LA NUEVA', pozo: 'CASTILLA-347', intervencion: 'WORKOVER', inicio: '26/03/2026', fin: '05/04/2026' },
-  { id: 6, torre: 'CLEAR-106', municipio: 'ANELO', pozo: 'LCAV-50(H)', intervencion: 'CAMBIO DE BOMBA BM', inicio: '26/03/2026', fin: '01/04/2026' },
-  { id: 7, torre: 'COLPET-9', municipio: 'ARAUCA', pozo: 'LA YUCA-122', intervencion: 'WORKOVER', inicio: '26/03/2026', fin: '01/04/2026' },
-  { id: 8, torre: 'INDEP-27', municipio: 'CASTILLA LA NUEVA', pozo: 'CASTILLA-130', intervencion: 'WORKOVER', inicio: '16/03/2026', fin: '29/03/2026' },
-  { id: 9, torre: 'INDEP-27', municipio: 'CASTILLA LA NUEVA', pozo: 'CASTILLA-100', intervencion: 'WORKOVER', inicio: '07/03/2026', fin: '15/03/2026' },
-  { id: 10, torre: 'INDEP-27', municipio: 'CASTILLA LA NUEVA', pozo: 'CASTILLA-130', intervencion: 'COMPLETAMIENTO', inicio: '01/02/2026', fin: '10/02/2026' },
-  { id: 11, torre: 'INDEP-53', municipio: 'CASTILLA LA NUEVA', pozo: 'CLIA-6', intervencion: 'WORKOVER', inicio: '25/03/2026', fin: '29/03/2026' },
-  { id: 12, torre: 'INDEP-45', municipio: 'ARAUCA', pozo: 'MATANEGRA-83', intervencion: 'WORKOVER', inicio: '25/03/2026', fin: '04/04/2026' },
-  { id: 13, torre: 'PETROT-3', municipio: 'ARAUCA', pozo: 'LA YUCA-35', intervencion: 'WORKOVER', inicio: '24/03/2026', fin: '31/03/2026' },
-  { id: 14, torre: 'PETROT-6', municipio: 'ARAUQUITA', pozo: 'BAYONERO-1 ST', intervencion: 'WORKOVER', inicio: '22/03/2026', fin: '31/03/2026' },
-  { id: 15, torre: 'COLPET-8', municipio: 'ARAUCA', pozo: 'CANO YARUMAL-23', intervencion: 'WORKOVER', inicio: '22/03/2026', fin: '29/03/2026' },
-  { id: 16, torre: 'BRASERV-882', municipio: 'CASTILLA LA NUEVA', pozo: 'CASTILLA-443', intervencion: 'WORKOVER', inicio: '21/03/2026', fin: '27/03/2026' },
-];
-
 const VisualizacionPremiumInterventionsPage: React.FC<Props> = ({ onOpenIntervention, onBack, initialTab = 'activas' }) => {
+  const { interventions } = useInterventions();
+  const mockActivas = interventions.filter(i => i.status === 'ACTIVA');
+  const mockHistoricas = interventions.filter(i => i.status === 'TERMINADA');
+
   const [tab, setTab] = useState<'activas' | 'historicas'>(initialTab);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [filterTorre, setFilterTorre] = useState('Todos');
@@ -85,7 +54,7 @@ const VisualizacionPremiumInterventionsPage: React.FC<Props> = ({ onOpenInterven
               <span className="text-[12px] font-semibold text-white/50">Selecciona una intervención y pulsa el botón 'Abrir Intervenciones'</span>
             </div>
             <button
-              onClick={() => { if (selectedId) onOpenIntervention(tab, selectedItem ? !(selectedItem as any).online : false); }}
+              onClick={() => { if (selectedId) onOpenIntervention(tab, selectedItem ? !selectedItem.online : false, selectedItem); }}
               className={`px-8 py-2.5 font-bold text-[11px] tracking-[.2em] transition-all flex flex-col items-center bg-[#111] border-t border-l border-r border-[#333] shadow-lg relative z-20 ${selectedId ? 'text-white cursor-pointer hover:bg-[#1A1A1A]' : 'text-white/30 cursor-not-allowed'}`}
               style={{ borderBottom: selectedId ? '2px solid #2dd4bf' : '2px solid transparent' }}>
               <span className="leading-tight">ABRIR</span>
@@ -178,7 +147,7 @@ const VisualizacionPremiumInterventionsPage: React.FC<Props> = ({ onOpenInterven
               <h1 className="text-[20px] font-normal tracking-widest mb-3 text-white uppercase drop-shadow-md">INTERVENCIONES HISTÓRICAS</h1>
               <span className="text-[10.5px] text-white/70 font-medium tracking-wide">Selecciona una intervención y pulsa el botón 'Abrir Intervención'</span>
             </div>
-            <button disabled={!selectedId} onClick={() => onOpenIntervention(tab, false)}
+            <button disabled={!selectedId} onClick={() => onOpenIntervention(tab, false, selectedItem)}
               className={`px-6 py-2.5 min-w-[220px] border border-white/5 bg-[rgba(26,26,26,0.95)] text-[11px] font-bold uppercase border-b-[3px] transition-all ${selectedId ? 'border-b-[#47CEAC] text-white hover:bg-[#222] cursor-pointer' : 'border-b-[#47CEAC]/20 text-white/30 cursor-not-allowed'}`}>
               ABRIR INTERVENCIÓN
             </button>
