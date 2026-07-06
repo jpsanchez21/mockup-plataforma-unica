@@ -97,11 +97,18 @@ def build_windows(frame: pd.DataFrame) -> dict:
     return {"meta": meta, "windows": windows}
 
 
+def _load_day(db: SkanDataConnections, device_id: str, day) -> pd.DataFrame:
+    try:
+        return db.operational_day_frame(device_id, str(day))
+    except Exception:  # noqa: BLE001 - carpeta del dia puede no existir aun
+        return pd.DataFrame()
+
+
 def load_rig_frame(db: SkanDataConnections, device_id: str) -> pd.DataFrame:
     today = datetime.now(timezone.utc).date()
     yesterday = today - timedelta(days=1)
-    frame = db.operational_day_frame(device_id, str(yesterday))
-    frame_today = db.operational_day_frame(device_id, str(today))
+    frame = _load_day(db, device_id, yesterday)
+    frame_today = _load_day(db, device_id, today)
     if not frame_today.empty:
         frame = pd.concat([frame, frame_today], ignore_index=True) if not frame.empty else frame_today
     return frame
