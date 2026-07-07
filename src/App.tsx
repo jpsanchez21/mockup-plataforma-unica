@@ -83,7 +83,7 @@ function App() {
   const [vizPremiumIntervention, setVizPremiumIntervention] = useState<InterventionRow | null>(null);
 
   const { rigs } = useRigsMeta();
-  const [selectedRig, setSelectedRig] = useState<string>('mock-rig');
+  const [selectedRig, setSelectedRig] = useState<string>('');
   React.useEffect(() => {
     if (rigs.length > 0 && !rigs.some(r => r.device_id === selectedRig)) {
       setSelectedRig(rigs[0].device_id);
