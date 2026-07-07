@@ -39,7 +39,7 @@ interface UseSkanviewDataResult {
   meta: SkanviewMeta | null;
 }
 
-export function useSkanviewData(activeWindow: TimeWindow, deviceId: string = 'mock-rig'): UseSkanviewDataResult {
+export function useSkanviewData(activeWindow: TimeWindow, deviceId: string): UseSkanviewDataResult {
   const [raw, setRaw] = useState<SkanviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -653,7 +653,7 @@ const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData,
               </div>
             </div>
             <div className="glass-panel overflow-hidden p-0">
-              <SurveyChart />
+              <SurveyChart latestPoint={latestPoint} />
             </div>
           </div>
 

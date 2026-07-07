@@ -1,10 +1,12 @@
 // src/components/SurveyChart.tsx
 import React from 'react';
-import { useSkanviewData } from '../hooks/useSkanviewData';
 
-const SurveyChart: React.FC = () => {
-  const { latestPoint } = useSkanviewData('2h');
-  const currentDepth = latestPoint?.depth || 1994; 
+interface SurveyChartProps {
+  latestPoint?: { depth: number | null } | null;
+}
+
+const SurveyChart: React.FC<SurveyChartProps> = ({ latestPoint }) => {
+  const currentDepth = latestPoint?.depth || 1994;
   const maxDepthVisible = 8000;
 
   // S-Curve points roughly matching the visual mockup
