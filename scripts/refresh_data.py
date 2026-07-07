@@ -71,12 +71,19 @@ def _downsample(frame: pd.DataFrame, max_points: int) -> pd.DataFrame:
 def build_windows(frame: pd.DataFrame) -> dict:
     frame = frame.sort_values("tstm")
     frame["ts"] = (frame["tstm"] * 1000).astype("int64")
-    now = datetime.now(timezone.utc)
+    generated_at = datetime.now(timezone.utc)
+
+    all_ts = frame["ts"].tolist()
+    last_ts = max(all_ts) if all_ts else None
+    # Anclar las ventanas al ultimo dato REAL disponible, no al reloj actual: el
+    # Data Lake puede tener rezago de varias horas, y si ancoramos en "ahora" las
+    # ventanas cortas (10m/30m/1h/2h) quedan vacias aunque haya datos recientes.
+    anchor_ms = last_ts if last_ts is not None else int(generated_at.timestamp() * 1000)
 
     windows: dict[str, list[dict]] = {}
     for name, delta in TIME_WINDOWS.items():
-        cutoff_ms = int((now - delta).timestamp() * 1000)
-        sliced = frame[frame["ts"] >= cutoff_ms]
+        cutoff_ms = anchor_ms - int(delta.total_seconds() * 1000)
+        sliced = frame[(frame["ts"] >= cutoff_ms) & (frame["ts"] <= anchor_ms)]
         sliced = _downsample(sliced, MAX_POINTS_PER_WINDOW)
 
         points = []
@@ -88,12 +95,11 @@ def build_windows(frame: pd.DataFrame) -> dict:
             points.append(point)
         windows[name] = points
 
-    all_ts = frame["ts"].tolist()
     meta = {
         "first_ts": int(min(all_ts)) if all_ts else None,
-        "last_ts": int(max(all_ts)) if all_ts else None,
+        "last_ts": int(last_ts) if last_ts is not None else None,
         "columns": list(COLUMN_MAP.keys()),
-        "generated_at": now.isoformat(),
+        "generated_at": generated_at.isoformat(),
     }
     return {"meta": meta, "windows": windows}
 
