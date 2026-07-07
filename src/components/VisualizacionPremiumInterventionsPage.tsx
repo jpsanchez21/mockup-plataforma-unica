@@ -39,7 +39,7 @@ const VisualizacionPremiumInterventionsPage: React.FC<Props> = ({ onOpenInterven
       <div className="w-full h-[calc(100vh-50px)] mt-[50px] bg-[#1F1F1F] text-white flex flex-col relative overflow-hidden select-none font-sans">
         <img src="https://dlsinfoappsprod.blob.core.windows.net/clients-logo/SkanHawk logo.png" alt="Watermark"
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[75vh] object-contain opacity-[0.03] pointer-events-none" />
-        <div className="flex-1 w-full max-w-7xl mx-auto px-8 pt-6 flex flex-col z-10 relative">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-8 pt-6 flex flex-col z-10 relative overflow-hidden">
           <div className="flex justify-between items-start mb-6 relative w-full h-[70px]">
             <div className="flex flex-col gap-3 relative z-20">
               <button onClick={() => { setTab('historicas'); setSelectedId(null); }}
