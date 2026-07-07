@@ -2,15 +2,17 @@ import React from 'react';
 import { VolumeX, Layout, Home } from 'lucide-react';
 import { PageView } from '../App';
 import UserDropdown from './UserDropdown';
+import { InterventionRow } from '../hooks/useSkanviewData';
 
 interface VisualizacionPremiumTopBarProps {
   currentPage?: PageView;
   onGoToInterventions?: () => void;
   onGoHome?: () => void;
   onLogout?: () => void;
+  intervention?: InterventionRow | null;
 }
 
-const VisualizacionPremiumTopBar: React.FC<VisualizacionPremiumTopBarProps> = ({ currentPage = 'dashboard', onGoToInterventions, onGoHome, onLogout }) => {
+const VisualizacionPremiumTopBar: React.FC<VisualizacionPremiumTopBarProps> = ({ currentPage = 'dashboard', onGoToInterventions, onGoHome, onLogout, intervention }) => {
   return (
     <header className="h-[50px] flex items-center absolute top-0 left-0 right-0 z-50 select-none px-4 bg-[#1B1B1E] border-b border-[#2A2A2E] shadow-xl">
 
@@ -40,12 +42,14 @@ const VisualizacionPremiumTopBar: React.FC<VisualizacionPremiumTopBarProps> = ({
         <>
           <div className="ml-6 hidden md:flex items-center">
             <span className="text-[10px] font-black text-white uppercase tracking-widest drop-shadow-md">
-              POZO: CASTILLA NORTE-407
+              POZO: {intervention ? intervention.pozo : 'CASTILLA NORTE-407'}
             </span>
           </div>
           <div className="ml-4 hidden md:flex items-center gap-1.5">
-            <div className="w-[10px] h-[10px] rounded-full bg-[#008000] shadow-[0_0_8px_rgba(0,128,0,0.8)]"></div>
-            <span className="text-[10px] font-black text-white tracking-widest uppercase mt-[1px] drop-shadow-md">ONLINE</span>
+            <div className={`w-[10px] h-[10px] rounded-full ${intervention?.online === false ? 'bg-[#555]' : 'bg-[#008000] shadow-[0_0_8px_rgba(0,128,0,0.8)]'}`}></div>
+            <span className="text-[10px] font-black text-white tracking-widest uppercase mt-[1px] drop-shadow-md">
+              {intervention?.online === false ? 'OFFLINE' : 'ONLINE'}
+            </span>
           </div>
         </>
       )}

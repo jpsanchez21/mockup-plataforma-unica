@@ -146,7 +146,7 @@ def to_utc(local_dt, utc_offset) -> datetime | None:
     return (local_dt - timedelta(hours=offset)).replace(tzinfo=timezone.utc)
 
 
-def refresh_interventions(db: SkanDataConnections, output_dir: Path) -> None:
+def refresh_interventions(db: SkanDataConnections, output_dir: Path) -> list[dict]:
     rows = db.sql_query(INTERVENTIONS_QUERY, database="SKH_DB")
     interventions = [
         {
@@ -168,13 +168,15 @@ def refresh_interventions(db: SkanDataConnections, output_dir: Path) -> None:
     ]
     (output_dir / "interventions.json").write_text(json.dumps(interventions))
     print(f"interventions.json: {len(interventions)} filas")
+    return interventions
 
 
 def main() -> int:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     db = SkanDataConnections()
 
-    refresh_interventions(db, OUTPUT_DIR)
+    interventions = refresh_interventions(db, OUTPUT_DIR)
+    active_intervention_rigs = {i["device_id"] for i in interventions if i["status"] == "ACTIVA"}
 
     rigs = db.sql_query(
         "SELECT device_id, number, online, ping_time FROM dbo.rigs ORDER BY online DESC, ping_time DESC",
@@ -192,8 +194,9 @@ def main() -> int:
     ]
     (OUTPUT_DIR / "rigs_meta.json").write_text(json.dumps(rigs_meta))
 
-    online_rigs = [r["device_id"] for r in rigs_meta if r["online"]]
-    for device_id in online_rigs:
+    online_rigs = {r["device_id"] for r in rigs_meta if r["online"]}
+    target_rigs = online_rigs | active_intervention_rigs
+    for device_id in target_rigs:
         out_path = OUTPUT_DIR / f"{device_id}.json"
         try:
             frame = load_rig_frame(db, device_id)

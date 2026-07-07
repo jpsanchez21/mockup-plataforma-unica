@@ -4,6 +4,7 @@ import { Settings, AlertTriangle, Bell, Check, X, History, Printer, ChevronLeft,
 import WellChart from './WellChart';
 import SurveyChart from './SurveyChart';
 import ExportDrawer from './ExportDrawer';
+import { InterventionRow } from '../hooks/useSkanviewData';
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell,
   ReferenceLine, CartesianGrid, LineChart, Line
@@ -39,9 +40,11 @@ interface DashboardProps {
   timeRange: TimeWindow;
   onTimeRangeChange: (val: TimeWindow) => void;
   isHistorical?: boolean;
+  intervention?: InterventionRow | null;
 }
 
-const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData, latestPoint, loading, timeRange, onTimeRangeChange, isHistorical }) => {
+const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData, latestPoint, loading, timeRange, onTimeRangeChange, isHistorical, intervention }) => {
+  const wellLabel = intervention ? `${intervention.torre} - ${intervention.pozo}` : 'INDEP-219 - CASTILLA NORTE-407';
   const [showTorqueSettings, setShowTorqueSettings] = useState(false);
   const [pipeType, setPipeType] = useState('TUBING');
   const [minTorqueInput, setMinTorqueInput] = useState('1240');
@@ -629,7 +632,7 @@ const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData,
           {/* Alarmas & Survey */}
           <div className="grid grid-cols-[1.4fr_1fr] gap-2 h-[220px] shrink-0">
             <div className="glass-panel p-3 flex flex-col">
-              <span className="text-[12px] font-black text-white uppercase tracking-tight mb-0.5">INDEP-219 - CASTILLA NORTE-407</span>
+              <span className="text-[12px] font-black text-white uppercase tracking-tight mb-0.5">{wellLabel}</span>
               <span className="text-[11px] font-bold text-white/60 mb-3">Alarmas - Alertas</span>
               <div className="flex flex-col gap-2 flex-1 justify-center">
                 <div className="flex items-center gap-2 rounded-md px-2 py-2" style={{ background: 'rgba(160,25,15,0.90)' }}>
@@ -778,9 +781,9 @@ const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData,
                 <History size={13} className="text-[#47CEAC]/70" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Exploración Histórica</span>
                 <span className="text-white/15 text-[10px]">·</span>
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">CASTILLA NORTE-407</span>
+                <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{intervention ? intervention.pozo : 'CASTILLA NORTE-407'}</span>
                 <span className="text-white/15 text-[10px]">·</span>
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">INDEP-219</span>
+                <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{intervention ? intervention.torre : 'INDEP-219'}</span>
                 <span className="text-white/15 text-[10px]">·</span>
                 <span className="text-[10px] font-bold text-white/25 uppercase tracking-wider">{allData.length} pts</span>
               </div>

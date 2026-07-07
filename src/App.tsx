@@ -140,6 +140,7 @@ function App() {
               onGoToInterventions={() => setCurrentPage('vizpremium-interventions')}
               onGoHome={() => window.close()}
               onLogout={() => window.close()}
+              intervention={vizPremiumIntervention}
             />
           )}
 
@@ -208,6 +209,7 @@ function App() {
                     latestPoint={premiumLatestPoint} loading={premiumLoading} meta={premiumMeta}
                     timeRange={timeRange} onTimeRangeChange={setTimeRange}
                     isHistorical={false}
+                    intervention={vizPremiumIntervention}
                   />
                 </main>
               </div>
