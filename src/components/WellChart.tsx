@@ -63,17 +63,22 @@ const TIME_WINDOWS: { v: TimeWindow; l: string }[] = [
   { v: '1d', l: '1d' },
 ];
 
-const TraceHeader = ({ trace }: { trace: TraceConfig }) => {
-  const mid = (trace.min + trace.max) / 2;
+const fmtRange = (v: number): string => {
+  if (!Number.isFinite(v)) return '0';
+  return Math.abs(v) >= 10 ? String(Math.round(v)) : String(Math.round(v * 10) / 10);
+};
+
+const TraceHeader = ({ trace, range }: { trace: TraceConfig; range: { min: number; max: number } }) => {
+  const mid = (range.min + range.max) / 2;
   return (
     <div className="flex flex-col items-center mb-1.5 w-full px-2">
       <span className="text-[11px] font-black truncate w-full text-center mb-0.5" style={{ color: trace.color }}>
         {trace.label}
       </span>
       <div className="w-full flex justify-between text-[9px] font-bold mb-0.5" style={{ color: trace.color }}>
-          <span>{trace.min}</span>
-          <span>{mid}</span>
-          <span>{trace.max}</span>
+          <span>{fmtRange(range.min)}</span>
+          <span>{fmtRange(mid)}</span>
+          <span>{fmtRange(range.max)}</span>
       </div>
       <div className="w-full h-1 relative flex items-center">
          <div className="w-full h-[1px] bg-white/20"></div>
@@ -434,6 +439,46 @@ const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _load
   const containerRef = React.useRef<HTMLDivElement>(null);
   const tracks = [0, 1, 2, 3];
 
+  // Los rangos fijos originales asumian valores en unidades de ingenieria
+  // (ej. Carga Gancho 0-50 Klb) pero el Data Lake real reporta en otra escala
+  // (ej. ~85000). Un valor fuera del rango fijo se recorta visualmente contra
+  // el limite, pareciendo "congelado" aunque cambie por dentro. En vez de
+  // adivinar el factor de conversion de cada una de las 12 variables,
+  // autoajustamos cada track al rango real de los datos que llegan.
+  const autoRanges = useMemo(() => {
+    const ranges: Record<string, { min: number; max: number }> = {};
+    INITIAL_TRACES.forEach(t => {
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (const pt of data) {
+        const v = (pt as any)[t.id];
+        if (v === null || v === undefined || Number.isNaN(v)) continue;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+      if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+        ranges[t.id] = { min: t.min, max: t.max };
+        return;
+      }
+      if (lo === hi) {
+        const pad = Math.abs(lo) > 0 ? Math.abs(lo) * 0.1 : 1;
+        lo -= pad; hi += pad;
+      } else {
+        const pad = (hi - lo) * 0.05;
+        lo -= pad; hi += pad;
+      }
+      ranges[t.id] = { min: lo, max: hi };
+    });
+    return ranges;
+  }, [data]);
+
+  const effectiveRange = (t: TraceConfig): { min: number; max: number } => {
+    const original = INITIAL_TRACES.find(o => o.id === t.id);
+    const manuallyEdited = !!original && (t.min !== original.min || t.max !== original.max);
+    if (manuallyEdited) return { min: t.min, max: t.max };
+    return autoRanges[t.id] ?? { min: t.min, max: t.max };
+  };
+
   const { normalizedData, domainY, fullDomainY, macroDomainY } = useMemo(() => {
     if (!data.length) return { normalizedData: [], domainY: [0, 1000], fullDomainY: [0, 1000], macroDomainY: [0, 1000] };
     
@@ -454,8 +499,9 @@ const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _load
       const entry: any = { relTs: pt.ts };
       traces.forEach(t => {
         const raw = (pt as any)[t.id] ?? 0;
-        const range = t.max - t.min;
-        entry[t.id] = range === 0 ? 0 : (raw - t.min) / range;
+        const { min, max } = effectiveRange(t);
+        const range = max - min;
+        entry[t.id] = range === 0 ? 0.5 : (raw - min) / range;
       });
       return entry;
     });
@@ -843,7 +889,7 @@ const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _load
             {/* Header Area for this Track */}
             <div className="h-[135px] border-b border-white/10 py-1 flex flex-col justify-end bg-black/10">
                {traces.filter(t => t.trackIndex === trackIdx).map(t => (
-                 <TraceHeader key={t.id} trace={t} />
+                 <TraceHeader key={t.id} trace={t} range={effectiveRange(t)} />
                ))}
             </div>
 
