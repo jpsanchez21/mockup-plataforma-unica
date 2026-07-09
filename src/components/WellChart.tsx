@@ -441,45 +441,11 @@ const WellChart: React.FC<WellChartProps> = ({ data, latestPoint, loading: _load
   const containerRef = React.useRef<HTMLDivElement>(null);
   const tracks = [0, 1, 2, 3];
 
-  // Los rangos fijos originales asumian valores en unidades de ingenieria
-  // (ej. Carga Gancho 0-50 Klb) pero el Data Lake real reporta en otra escala
-  // (ej. ~85000). Un valor fuera del rango fijo se recorta visualmente contra
-  // el limite, pareciendo "congelado" aunque cambie por dentro. En vez de
-  // adivinar el factor de conversion de cada una de las 12 variables,
-  // autoajustamos cada track al rango real de los datos que llegan.
-  const autoRanges = useMemo(() => {
-    const ranges: Record<string, { min: number; max: number }> = {};
-    INITIAL_TRACES.forEach(t => {
-      let lo = Infinity;
-      let hi = -Infinity;
-      for (const pt of data) {
-        const v = (pt as any)[t.id];
-        if (v === null || v === undefined || Number.isNaN(v)) continue;
-        if (v < lo) lo = v;
-        if (v > hi) hi = v;
-      }
-      if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
-        ranges[t.id] = { min: t.min, max: t.max };
-        return;
-      }
-      if (lo === hi) {
-        const pad = Math.abs(lo) > 0 ? Math.abs(lo) * 0.1 : 1;
-        lo -= pad; hi += pad;
-      } else {
-        const pad = (hi - lo) * 0.05;
-        lo -= pad; hi += pad;
-      }
-      ranges[t.id] = { min: lo, max: hi };
-    });
-    return ranges;
-  }, [data]);
-
-  const effectiveRange = (t: TraceConfig): { min: number; max: number } => {
-    const original = INITIAL_TRACES.find(o => o.id === t.id);
-    const manuallyEdited = !!original && (t.min !== original.min || t.max !== original.max);
-    if (manuallyEdited) return { min: t.min, max: t.max };
-    return autoRanges[t.id] ?? { min: t.min, max: t.max };
-  };
+  // Rangos por track: los valores fijos confirmados en INITIAL_TRACES (ver
+  // arriba) son el default; el usuario puede ajustarlos a mano por track
+  // desde el editor de leyenda (TraceLegendEditor), lo que actualiza
+  // `traces` state -- effectiveRange siempre refleja ese valor actual.
+  const effectiveRange = (t: TraceConfig): { min: number; max: number } => ({ min: t.min, max: t.max });
 
   const { normalizedData, domainY, fullDomainY, macroDomainY } = useMemo(() => {
     if (!data.length) return { normalizedData: [], domainY: [0, 1000], fullDomainY: [0, 1000], macroDomainY: [0, 1000] };
