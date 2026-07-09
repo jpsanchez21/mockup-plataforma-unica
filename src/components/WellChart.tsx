@@ -29,28 +29,30 @@ const TRACE_UNITS: Record<string, string[]> = {
   flow:     ['Bbls/min', 'gpm', 'lpm', 'm³/min'],
   spm:      ['SPM'],
   pump:     ['psi', 'kPa', 'bar'],
-  torqPot:  ['lb-ft', 'kN·m', 'N·m'],
+  rpm:      ['rpm'],
   torque:   ['lb-ft', 'kN·m', 'N·m'],
   torqHid:  ['lb-ft', 'kN·m', 'N·m'],
 };
 
+// Rangos por defecto confirmados (2026-07-09), reemplazan las suposiciones
+// anteriores que no calzaban con la escala real del Data Lake.
 const INITIAL_TRACES: TraceConfig[] = [
   // Track 0
-  { id: 'wob', label: 'Peso Sobre Broca', unit: 'Klb', color: '#2D9113', min: -5, max: 15, trackIndex: 0 },
-  { id: 'tubes', label: 'Contador Tuberia', unit: 'tubos', color: '#06BFC2', min: 0, max: 100, trackIndex: 0 },
-  { id: 'depth', label: 'Profundidad', unit: 'ft', color: '#1477D2', min: 0, max: 2000, trackIndex: 0 },
+  { id: 'wob', label: 'Peso Sobre Broca', unit: 'Klb', color: '#2D9113', min: -30, max: 30, trackIndex: 0 },
+  { id: 'tubes', label: 'Contador Tuberia', unit: 'tubos', color: '#06BFC2', min: 0, max: 500, trackIndex: 0 },
+  { id: 'depth', label: 'Profundidad', unit: 'ft', color: '#1477D2', min: 0, max: 10000, trackIndex: 0 },
   // Track 1
-  { id: 'hookload', label: 'Carga Gancho', unit: 'Klb', color: '#D2D206', min: 0, max: 50, trackIndex: 1 },
-  { id: 'blockVel', label: 'Velocidad Bloque', unit: 'ft/min', color: '#38808C', min: 0, max: 200, trackIndex: 1 },
-  { id: 'blockPos', label: 'Posición Bloque', unit: 'ft', color: '#AC0653', min: 0, max: 100, trackIndex: 1 },
+  { id: 'hookload', label: 'Carga Gancho', unit: 'Klb', color: '#D2D206', min: 0, max: 250, trackIndex: 1 },
+  { id: 'blockVel', label: 'Velocidad Bloque', unit: 'ft/min', color: '#38808C', min: 0, max: 350, trackIndex: 1 },
+  { id: 'blockPos', label: 'Posición Bloque', unit: 'ft', color: '#AC0653', min: -10, max: 80, trackIndex: 1 },
   // Track 2
-  { id: 'flow', label: 'Caudal', unit: 'Bbls/min', color: '#AC0653', min: 0, max: 10, trackIndex: 2 },
-  { id: 'spm', label: 'Strokes por Minuto', unit: 'SPM', color: '#BE5C32', min: 0, max: 100, trackIndex: 2 },
-  { id: 'pump', label: 'Presión Bomba', unit: 'psi', color: '#13D23C', min: 0, max: 30, trackIndex: 2 },
+  { id: 'flow', label: 'Caudal', unit: 'Bbls/min', color: '#AC0653', min: 0, max: 15, trackIndex: 2 },
+  { id: 'spm', label: 'Strokes por Minuto', unit: 'SPM', color: '#BE5C32', min: 0, max: 200, trackIndex: 2 },
+  { id: 'pump', label: 'Presión Bomba', unit: 'psi', color: '#13D23C', min: 0, max: 3000, trackIndex: 2 },
   // Track 3
-  { id: 'torqPot', label: 'Torque Llave Pot Max', unit: 'lb-ft', color: '#13D23C', min: 0, max: 5000, trackIndex: 3 },
-  { id: 'torque', label: 'Torque', unit: 'lb-ft', color: '#C80606', min: -100, max: 100, trackIndex: 3 },
-  { id: 'torqHid', label: 'Torque Hidraulica', unit: 'lb-ft', color: '#06D2D2', min: 0, max: 5000, trackIndex: 3 },
+  { id: 'rpm', label: 'RPM', unit: 'rpm', color: '#13D23C', min: 0, max: 200, trackIndex: 3 },
+  { id: 'torque', label: 'Torque', unit: 'lb-ft', color: '#C80606', min: 0, max: 15000, trackIndex: 3 },
+  { id: 'torqHid', label: 'Torque Hidraulica', unit: 'lb-ft', color: '#06D2D2', min: 0, max: 15000, trackIndex: 3 },
 ];
 
 const TIME_WINDOWS: { v: TimeWindow; l: string }[] = [

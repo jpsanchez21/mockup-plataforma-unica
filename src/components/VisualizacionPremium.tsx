@@ -155,43 +155,67 @@ const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData,
     { depth: 13000, trippingOut:  60, trippingIn:   8, dotOut:  63, dotIn:   5 },
   ];
 
-  const barData8 = [
-    { name: '13:20', val: 5.8 }, { name: '13:25', val: 6.1 }, { name: '13:31', val: 5.9 },
-    { name: '13:33:09', val: 7.2 }, { name: '13:40', val: 6.0 }, { name: '13:48:03', val: 6.2 },
-    { name: '13:55', val: 5.7 }, { name: '14:02', val: 5.8 }, { name: '14:05:34', val: 6.3 },
-  ];
-  const juntasData8 = [
-    { name: '02:00:00', val: 11 }, { name: '03:30:00', val: 11 }, { name: '05:00:00', val: 3 },
-    { name: '06:30:00', val: 9 },  { name: '08:00:00', val: 10 }, { name: '09:30:00', val: 12 },
-    { name: '11:00:00', val: 2 },  { name: '12:30:00', val: 11 }, { name: '14:00:00', val: 9 },
-  ];
-
-  const getFilteredBarData8 = () => {
-    switch(timeRange) {
-      case '10m': return barData8.slice(-3);
-      case '30m': return barData8.slice(-5);
-      default: return barData8;
+  // Una "conexion" real = un incremento de Contador Tuberia (tubes) en la
+  // serie de tiempo: +1 tubo = sencillo, +2 (o mas) = doble. Confirmado con
+  // el usuario 2026-07-09 -- reemplaza los arreglos fijos/inventados que
+  // habia antes en Ciclo Cuna a Cuna, Juntas por Hora y Torques Aplicados.
+  const connections = useMemo(() => {
+    const events: { ts: number; tuboDelta: number; torquePeak: number }[] = [];
+    const PEAK_WINDOW_MS = 2 * 60 * 1000;
+    for (let i = 1; i < data.length; i++) {
+      const prevTubes = data[i - 1]?.tubes;
+      const currTubes = data[i]?.tubes;
+      if (prevTubes == null || currTubes == null) continue;
+      const delta = currTubes - prevTubes;
+      if (delta <= 0) continue;
+      const ts = data[i].ts;
+      let torquePeak = 0;
+      for (const p of data) {
+        if (Math.abs(p.ts - ts) <= PEAK_WINDOW_MS && p.torqHid != null) {
+          torquePeak = Math.max(torquePeak, Math.abs(p.torqHid));
+        }
+      }
+      events.push({ ts, tuboDelta: delta, torquePeak });
     }
-  };
-  const getFilteredJuntasData8 = () => {
-    switch(timeRange) {
-      case '10m': return juntasData8.slice(-3);
-      case '1h':  return juntasData8.slice(-6);
-      default: return juntasData8;
-    }
-  };
+    return events;
+  }, [data]);
 
-  const currentBarData8 = chartType8 === 'ciclo' ? getFilteredBarData8() : getFilteredJuntasData8();
+  const fmtHHMM = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
-  const torqueDataReal = useMemo(() => {
-    return currentBarData8.map((d, i) => ({
-      time: d.name,
-      value: 11000 + (Math.sin(i * 45) * 500)
-    }));
-  }, [currentBarData8]);
+  const cicloCunaData = useMemo(() => connections.slice(1).map((e, i) => ({
+    name: fmtHHMM(e.ts),
+    val: Math.round(((e.ts - connections[i].ts) / 60000) * 10) / 10,
+    isDouble: e.tuboDelta >= 2,
+  })), [connections]);
+
+  const juntasPorHoraData = useMemo(() => {
+    const buckets = new Map<number, number>();
+    connections.forEach(e => {
+      const d = new Date(e.ts);
+      d.setMinutes(0, 0, 0);
+      const key = d.getTime();
+      buckets.set(key, (buckets.get(key) ?? 0) + 1);
+    });
+    return Array.from(buckets.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([key, count]) => ({ name: new Date(key).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }), val: count }));
+  }, [connections]);
+
+  const currentBarData8 = chartType8 === 'ciclo' ? cicloCunaData : juntasPorHoraData;
+
+  const torqueDataReal = useMemo(() => connections.map(e => ({
+    time: fmtHHMM(e.ts),
+    value: e.torquePeak,
+  })), [connections]);
 
   const barHeight = 45;
   const chartHeight14 = Math.max(160, torqueDataReal.length * barHeight);
+
+  const juntasPorHora = useMemo(() => {
+    if (data.length < 2) return 0;
+    const hours = (data[data.length - 1].ts - data[0].ts) / 3_600_000;
+    return hours > 0 ? connections.length / hours : 0;
+  }, [connections, data]);
 
   const getPeriodoText = (t: TimeWindow) => {
     switch(t) {
@@ -295,10 +319,10 @@ const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData,
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={currentBarData8} margin={{ top: 4, right: 2, left: 0, bottom: 16 }}>
                   <XAxis dataKey="name" fontSize={7} tick={{ fill: '#ffffff' }} tickLine={false} axisLine={{ stroke: '#ffffff40' }} height={16} />
-                  <YAxis fontSize={7} tick={{ fill: '#ffffff' }} tickLine={false} axisLine={false} domain={[0, chartType8 === 'ciclo' ? 10 : 14]} width={22} />
+                  <YAxis fontSize={7} tick={{ fill: '#ffffff' }} tickLine={false} axisLine={false} domain={[0, (dataMax: number) => Math.max(dataMax * 1.15, 1)]} width={22} />
                   <CartesianGrid vertical={false} stroke="#333" />
                   <Bar dataKey="val" radius={[1,1,0,0]} maxBarSize={12}>
-                    {currentBarData8.map((_,i) => <Cell key={i} fill={chartType8 === 'juntas' ? '#8b5cf6' : (i%2===0 ? 'url(#gradientSencilloP)' : 'url(#gradientDobleP)')} />)}
+                    {currentBarData8.map((d: any, i) => <Cell key={i} fill={chartType8 === 'juntas' ? '#8b5cf6' : (d.isDouble ? 'url(#gradientDobleP)' : 'url(#gradientSencilloP)')} />)}
                   </Bar>
                   {kpiValue8 > 0 && <ReferenceLine y={kpiValue8} stroke="#ef4444" strokeWidth={1.5} label={{ position:'top', value:`KPI: ${kpiValue8}`, fill:'#fff', fontSize:10, fontWeight:'bold' }} />}
                 </BarChart>
@@ -331,7 +355,7 @@ const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData,
                   <span className="text-[20px] font-extrabold text-white tracking-widest leading-none">RIH</span>
                 </div>
                 <div className="flex-1 flex flex-col">
-                  <div className="flex-1 border-b border-[#525252]"><OpCell val="12.50" lbl="Juntas / Hora" sub="" /></div>
+                  <div className="flex-1 border-b border-[#525252]"><OpCell val={juntasPorHora.toFixed(2)} lbl="Juntas / Hora" sub="" /></div>
                   <div className="flex-1"><OpCell val="0.87" lbl="Conex. - Desconex." sub="horas" /></div>
                 </div>
               </div>
@@ -574,7 +598,7 @@ const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData,
             <div className="relative z-10 flex flex-col items-center justify-center h-full gap-0">
               <span className="text-[10px] font-black text-white uppercase tracking-[0.18em] leading-none">TONELADA MILLA</span>
               <div className="flex items-baseline gap-1.5 mt-1">
-                <span className="text-[32px] font-black text-white leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">181.98</span>
+                <span className="text-[32px] font-black text-white leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{(latestPoint?.toneladaMilla ?? 0).toFixed(2)}</span>
                 <span className="text-[11px] font-bold text-white/35 uppercase tracking-wider leading-none mb-0.5">TM</span>
               </div>
             </div>
@@ -595,12 +619,12 @@ const VisualizacionPremium: React.FC<DashboardProps> = ({ data, data2h, allData,
               </div>
               <div className="flex flex-col gap-1 items-center">
                 <div className="flex flex-col items-center leading-[1.1] text-[#F59B22]">
-                  <span className="text-[10px] font-black uppercase">LEL</span>
-                  <span className="text-[9px] font-black">(%)</span>
+                  <span className="text-[13px] font-black">{(latestPoint?.lel ?? 0).toFixed(1)}</span>
+                  <span className="text-[9px] font-black uppercase">LEL (%)</span>
                 </div>
                 <div className="flex flex-col items-center leading-[1.1] text-[#F59B22] mt-1">
-                  <span className="text-[10px] font-black uppercase">H2S</span>
-                  <span className="text-[9px] font-black">ppm</span>
+                  <span className="text-[13px] font-black">{(latestPoint?.h2s ?? 0).toFixed(1)}</span>
+                  <span className="text-[9px] font-black uppercase">H2S ppm</span>
                 </div>
               </div>
             </div>

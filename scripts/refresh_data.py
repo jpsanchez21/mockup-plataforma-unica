@@ -11,18 +11,22 @@ mas; "hoy" siempre se re-consulta porque sigue escribiendose.
 
 Mapeo de columnas parquet -> DataPoint del frontend (best-effort por nombre,
 ajustar aqui si un experto de dominio confirma otra columna):
-    depth     -> profundidad_sarta
-    blockPos  -> bloque_pos
-    blockVel  -> bloque_vel
-    hookload  -> carga_gancho
-    torqHid   -> llave_hid_torque
-    torqPot   -> llave_pot_torque
-    flow      -> bbl_por_min
-    pump      -> presion
-    torque    -> torque_escal
-    wob       -> peso_sobre_broca
-    spm       -> strokes_por_min
-    tubes     -> contador_tubos
+    depth         -> profundidad_sarta
+    blockPos      -> bloque_pos
+    blockVel      -> bloque_vel
+    hookload      -> carga_gancho
+    torqHid       -> llave_hid_torque
+    torqPot       -> llave_pot_torque
+    flow          -> bbl_por_min
+    pump          -> presion
+    torque        -> torque_escal
+    wob           -> peso_sobre_broca
+    spm           -> strokes_por_min
+    tubes         -> contador_tubos
+    rpm           -> rpm
+    toneladaMilla -> tonelada_milla_actual
+    h2s           -> h2s_sensor_1
+    lel           -> lel_sensor_1
 """
 from __future__ import annotations
 
@@ -65,6 +69,10 @@ COLUMN_MAP = {
     "wob": "peso_sobre_broca",
     "spm": "strokes_por_min",
     "tubes": "contador_tubos",
+    "rpm": "rpm",
+    "toneladaMilla": "tonelada_milla_actual",
+    "h2s": "h2s_sensor_1",
+    "lel": "lel_sensor_1",
 }
 
 

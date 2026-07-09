@@ -17,6 +17,10 @@ export interface DataPoint {
   wob: number | null;
   spm: number | null;
   tubes: number | null;
+  rpm: number | null;
+  toneladaMilla: number | null;
+  h2s: number | null;
+  lel: number | null;
 }
 
 interface SkanviewMeta {
