@@ -43,10 +43,11 @@ interface UseSkanviewDataResult {
   meta: SkanviewMeta | null;
 }
 
-// El cron del servidor regenera los .json cada 2 min; sin este refresco
+// El cron del servidor regenera los .json cada 1 min; sin este refresco
 // periodico el navegador solo pide el dato una vez al abrir la pagina y se
-// queda "congelado" ahi aunque haya datos mas nuevos disponibles.
-const AUTO_REFRESH_MS = 60_000;
+// queda "congelado" ahi aunque haya datos mas nuevos disponibles. 15s es el
+// maximo practico sin sobrecargar de consultas el Data Lake para ~30 rigs.
+const AUTO_REFRESH_MS = 15_000;
 
 export function useSkanviewData(activeWindow: TimeWindow, deviceId: string): UseSkanviewDataResult {
   const [raw, setRaw] = useState<SkanviewData | null>(null);
