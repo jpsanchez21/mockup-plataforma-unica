@@ -39,6 +39,11 @@ interface UseSkanviewDataResult {
   meta: SkanviewMeta | null;
 }
 
+// El cron del servidor regenera los .json cada 2 min; sin este refresco
+// periodico el navegador solo pide el dato una vez al abrir la pagina y se
+// queda "congelado" ahi aunque haya datos mas nuevos disponibles.
+const AUTO_REFRESH_MS = 60_000;
+
 export function useSkanviewData(activeWindow: TimeWindow, deviceId: string): UseSkanviewDataResult {
   const [raw, setRaw] = useState<SkanviewData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,20 +51,34 @@ export function useSkanviewData(activeWindow: TimeWindow, deviceId: string): Use
 
   useEffect(() => {
     if (!deviceId) return;
-    setLoading(true);
-    fetch(`/data/${deviceId}.json`)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<SkanviewData>;
-      })
-      .then(d => {
-        setRaw(d);
-        setLoading(false);
-      })
-      .catch(e => {
-        setError(e.message || 'Error cargando datos');
-        setLoading(false);
-      });
+
+    let cancelled = false;
+    const load = (isFirstLoad: boolean) => {
+      if (isFirstLoad) setLoading(true);
+      fetch(`/data/${deviceId}.json`)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json() as Promise<SkanviewData>;
+        })
+        .then(d => {
+          if (cancelled) return;
+          setRaw(d);
+          setError(null);
+          setLoading(false);
+        })
+        .catch(e => {
+          if (cancelled) return;
+          setError(e.message || 'Error cargando datos');
+          setLoading(false);
+        });
+    };
+
+    load(true);
+    const interval = setInterval(() => load(false), AUTO_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [deviceId]);
 
   const data = useMemo<DataPoint[]>(() => {
@@ -94,16 +113,21 @@ export function useRigsMeta(): { rigs: RigMeta[]; loading: boolean } {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/data/rigs_meta.json')
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<RigMeta[]>;
-      })
-      .then(d => {
-        setRigs(d);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    const load = () => {
+      fetch('/data/rigs_meta.json')
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json() as Promise<RigMeta[]>;
+        })
+        .then(d => {
+          setRigs(d);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    };
+    load();
+    const interval = setInterval(load, AUTO_REFRESH_MS);
+    return () => clearInterval(interval);
   }, []);
 
   return { rigs, loading };
@@ -130,16 +154,21 @@ export function useInterventions(): { interventions: InterventionRow[]; loading:
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/data/interventions.json')
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<InterventionRow[]>;
-      })
-      .then(d => {
-        setInterventions(d);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    const load = () => {
+      fetch('/data/interventions.json')
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json() as Promise<InterventionRow[]>;
+        })
+        .then(d => {
+          setInterventions(d);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    };
+    load();
+    const interval = setInterval(load, AUTO_REFRESH_MS);
+    return () => clearInterval(interval);
   }, []);
 
   return { interventions, loading };

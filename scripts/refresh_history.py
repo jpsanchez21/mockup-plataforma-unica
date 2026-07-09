@@ -10,11 +10,20 @@ sucesivas y luego queda en reposo.
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
 
-from refresh_data import COLUMN_MAP, INTERVENTIONS_QUERY, OUTPUT_DIR, SkanDataConnections, _downsample, _load_day, to_utc
+from refresh_data import (
+    COLUMN_MAP,
+    INTERVENTIONS_QUERY,
+    NEW_DAY_FETCH_BUDGET,
+    OUTPUT_DIR,
+    SkanDataConnections,
+    _downsample,
+    load_day_cached,
+    to_utc,
+)
 
 HISTORY_DIR = OUTPUT_DIR / "history"
 MAX_POINTS = 5000
@@ -61,9 +70,10 @@ def build_history_payload(frame: pd.DataFrame, intervention_id: int, device_id: 
     return {"meta": meta, "points": points}
 
 
-def load_range_frame(db: SkanDataConnections, device_id: str, date_start: pd.Timestamp, date_end: pd.Timestamp) -> pd.DataFrame:
+def load_range_frame(db: SkanDataConnections, device_id: str, date_start: pd.Timestamp,
+                      date_end: pd.Timestamp, today, budget: dict) -> pd.DataFrame:
     days = _date_range(date_start.date(), date_end.date())
-    frames = [_load_day(db, device_id, day) for day in days]
+    frames = [load_day_cached(db, device_id, day, today, budget) for day in days]
     frames = [f for f in frames if not f.empty]
     if not frames:
         return pd.DataFrame()
@@ -76,6 +86,9 @@ def main() -> int:
 
     rows = db.sql_query(INTERVENTIONS_QUERY, database="SKH_DB")
     terminadas = rows[rows["status"] == "TERMINADA"]
+
+    today = datetime.now(timezone.utc).date()
+    budget = {"remaining": NEW_DAY_FETCH_BUDGET}
 
     processed = 0
     for _, row in terminadas.iterrows():
@@ -94,7 +107,7 @@ def main() -> int:
             continue
 
         try:
-            frame = load_range_frame(db, device_id, date_start, date_end)
+            frame = load_range_frame(db, device_id, date_start, date_end, today, budget)
             if frame.empty:
                 print(f"skip intervention {intervention_id} ({device_id}): sin datos operacionales")
                 processed += 1

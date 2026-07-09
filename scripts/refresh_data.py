@@ -3,6 +3,12 @@ reales de SKH_DB y del Data Lake operacional, usando el conector ya autorizado e
 /home/jpsanchez/00 conexiones. Pensado para correr por cron en el servidor (cada
 2 min). Para telemetria de intervenciones ya cerradas ver refresh_history.py.
 
+Para un rig con intervencion ACTIVA, la telemetria se trae desde la fecha real de
+inicio de esa intervencion hasta hoy (no una ventana fija) -- generico para
+cualquier intervencion, presente o futura. Los dias ya cerrados se cachean en
+parquet (ver CACHE_DIR) para no volver a golpear el Data Lake por ellos nunca
+mas; "hoy" siempre se re-consulta porque sigue escribiendose.
+
 Mapeo de columnas parquet -> DataPoint del frontend (best-effort por nombre,
 ajustar aqui si un experto de dominio confirma otra columna):
     depth     -> profundidad_sarta
@@ -31,6 +37,8 @@ sys.path.insert(0, "/home/jpsanchez/00 conexiones")
 from skan_sql_connections import SkanDataConnections  # noqa: E402
 
 OUTPUT_DIR = Path("/var/www/sandbox/data")
+CACHE_DIR = Path(__file__).resolve().parent.parent / ".cache" / "operational"
+NEW_DAY_FETCH_BUDGET = 20  # tope de dias NUEVOS (sin cache, sin contar "hoy") por corrida de cron
 
 TIME_WINDOWS: dict[str, timedelta] = {
     "10m": timedelta(minutes=10),
@@ -111,14 +119,39 @@ def _load_day(db: SkanDataConnections, device_id: str, day) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def load_rig_frame(db: SkanDataConnections, device_id: str) -> pd.DataFrame:
-    today = datetime.now(timezone.utc).date()
-    yesterday = today - timedelta(days=1)
-    frame = _load_day(db, device_id, yesterday)
-    frame_today = _load_day(db, device_id, today)
-    if not frame_today.empty:
-        frame = pd.concat([frame, frame_today], ignore_index=True) if not frame.empty else frame_today
+def load_day_cached(db: SkanDataConnections, device_id: str, day, today, budget: dict) -> pd.DataFrame:
+    """Cachea en parquet los dias ya cerrados (day < today) -- un dia cerrado
+    nunca cambia en el Data Lake, asi que se consulta una sola vez y se reusa
+    para siempre (por cualquier intervencion, activa o historica, sobre ese
+    mismo rig/fecha). 'hoy' siempre se re-consulta porque el dia sigue
+    escribiendose. `budget['remaining']` limita cuantos dias NUEVOS (sin cache)
+    se piden al Data Lake en esta corrida, para no saturarlo de golpe."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    path = CACHE_DIR / f"{device_id}__{day}.parquet"
+    if day < today and path.exists():
+        try:
+            return pd.read_parquet(path)
+        except Exception:  # noqa: BLE001 - cache corrupto, recargar de la fuente
+            pass
+    if day < today and budget["remaining"] <= 0:
+        return pd.DataFrame()  # backlog: se completa en una corrida siguiente
+    frame = _load_day(db, device_id, day)
+    if day < today:
+        budget["remaining"] -= 1
+        if not frame.empty:
+            frame.to_parquet(path)
     return frame
+
+
+def load_rig_frame(db: SkanDataConnections, device_id: str, since_date, budget: dict) -> pd.DataFrame:
+    today = datetime.now(timezone.utc).date()
+    since_date = min(since_date, today)
+    days = [since_date + timedelta(days=i) for i in range((today - since_date).days + 1)]
+    frames = [load_day_cached(db, device_id, d, today, budget) for d in days]
+    frames = [f for f in frames if not f.empty]
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
 
 
 INTERVENTIONS_QUERY = """
@@ -176,7 +209,9 @@ def main() -> int:
     db = SkanDataConnections()
 
     interventions = refresh_interventions(db, OUTPUT_DIR)
-    active_intervention_rigs = {i["device_id"] for i in interventions if i["status"] == "ACTIVA"}
+    active_by_rig = {
+        i["device_id"]: i for i in interventions if i["status"] == "ACTIVA" and i["date_start"]
+    }
 
     rigs = db.sql_query(
         "SELECT device_id, number, online, ping_time FROM dbo.rigs ORDER BY online DESC, ping_time DESC",
@@ -195,17 +230,30 @@ def main() -> int:
     (OUTPUT_DIR / "rigs_meta.json").write_text(json.dumps(rigs_meta))
 
     online_rigs = {r["device_id"] for r in rigs_meta if r["online"]}
-    target_rigs = online_rigs | active_intervention_rigs
+    target_rigs = online_rigs | set(active_by_rig.keys())
+
+    today = datetime.now(timezone.utc).date()
+    budget = {"remaining": NEW_DAY_FETCH_BUDGET}
+
     for device_id in target_rigs:
         out_path = OUTPUT_DIR / f"{device_id}.json"
         try:
-            frame = load_rig_frame(db, device_id)
+            intervention = active_by_rig.get(device_id)
+            # Rig con intervencion activa: traer desde su fecha de inicio real
+            # hasta hoy (con cache por dia). Rig solo "online" sin intervencion
+            # activa conocida (uso del selector generico de SkanView base): no
+            # necesita historia profunda, con ayer+hoy alcanza.
+            since_date = (
+                datetime.fromisoformat(intervention["date_start"]).date()
+                if intervention else today - timedelta(days=1)
+            )
+            frame = load_rig_frame(db, device_id, since_date, budget)
             if frame.empty:
                 print(f"skip {device_id}: sin datos operacionales recientes")
                 continue
             payload = build_windows(frame)
             out_path.write_text(json.dumps(payload))
-            print(f"ok {device_id}: {len(frame)} filas")
+            print(f"ok {device_id}: {len(frame)} filas (desde {since_date})")
         except Exception as exc:  # noqa: BLE001
             print(f"error {device_id}: {type(exc).__name__}: {exc}")
 
